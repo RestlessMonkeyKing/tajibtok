@@ -1,59 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tajib Tok (RMK CONNEX.)</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tajib Tok</title>
+    <!-- Firebase App and Authentication SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
+    <script src="https://gstatic.com/firebasejs/11.0.1/firebase-auth.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
-        body {
+        /* Core Styling Reset */
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
             font-family: Arial, sans-serif;
-            background: #f5f5f5;
+        }
+        body {
+            background: #000;
+            color: #fff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Sidebar Styling */
+        .sidebar {
+            width: 220px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #2f2f2f;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #69c9d0; /* TikTok-like teal */
+        }
+        .search-bar {
+            padding: 10px 15px;
+            background: #2f2f2f;
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .search-bar::placeholder {
+            color: #aaa;
+        }
+        /* Main Content & Video Feed Styling */
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+        }
+        .video-feed {
+            width: 400px;
+            max-width: 100%;
+        }
+        .video-container {
+            position: relative;
+            height: 85vh;
+            margin-bottom: 10px;
+            scroll-snap-align: start;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .video-player {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* Video Overlay Sidebar (Interaction Buttons) */
+        .video-sidebar {
+            position: absolute;
+            right: 10px;
+            bottom: 100px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            gap: 20px;
+        }
+        .sidebar-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .sidebar-button i {
+            font-size: 28px;
+        }
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            object-fit: cover;
+        }
+        /* Video Footer (Description) */
+        .video-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 15px;
+            max-width: 80%;
+        }
+        .video-description {
+            font-size: 15px;
+            margin-top: 10px;
+        }
+        /* Login Page Styling */
+        #loginPage {
+            display: flex;
+            flex-direction: column;
             justify-content: center;
+            align-items: center;
             height: 100vh;
-        }
-
-        .beta-banner {
-            position: fixed;
+            width: 100vw;
+            background: #000;
+            position: absolute;
             top: 0;
-            width: 100%;
-            background: #ff4747;
-            color: white;
-            text-align: center;
-            padding: 10px 0;
+            left: 0;
+            z-index: 100;
+        }
+        #loginButton {
+            background-color #69c9d0;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 20px;
+            cursor: pointer;
             font-weight: bold;
-            letter-spacing: 1px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-        }
-
-        .container {
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 40px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        p {
-            color: #666;
-            font-size: 18px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-
-    <div class="beta-banner">BETA BUILD</div>
-
-    <div class="container">
-        <h1>Tajib Tok (RMK CONNEX.)</h1>
-        <p>Website placeholder page — content coming soon.</p>
+    <!-- Login Screen (initially shown) -->
+    <div id="loginPage">
+        <h1>Welcome to Tajib Tok</h1>
+        <p>Made by Connex and RMK</p>
+        <button id="loginButton">
+            <i class="fab fa-google"></i> Sign in with Google
+        </button>
     </div>
 
+    <!-- Main App (initially hidden) -->
+    <div id="appContent" style="display: none;">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="logo">Tajib Tok</div>
+            <input type="text" class="search-bar" placeholder="Search for tajibs...">
+            <!-- Navigation links can be added here later -->
+        </div>
+
+        <!-- Main Vertical Video Feed -->
+        <div class="main-content">
+            <div class="video-feed">
+                <!-- Video Post 1 -->
+                <div class="video-container">
+                    <video class="video-player" loop muted>
+                        <!-- Replace with your video source -->
+                        <source src="placeholder-video1.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <!-- Video Interaction Sidebar -->
+                    <div class="video-sidebar">
+                        <img src="https://i.pravatar.cc/150?img=12" alt="User" class="user-avatar">
+                        <button class="sidebar-button">
+                            <i class="fas fa-heart"></i>
+                            <span>2.1K</span>
+                        </button>
+                        <button class="sidebar-button">
+                            <i class="fas fa-comment"></i>
+                            <span>350</span>
+                        </button>
+                        <button class="sidebar-button">
+                            <i class="fas fa-bookmark"></i>
+                            <span>Save</span>
+                        </button>
+                        <button class="sidebar-button">
+                            <i class="fas fa-share"></i>
+                            <span>Share</span>
+                        </button>
+                    </div>
+                    <!-- Video Footer/Description -->
+                    <div class="video-footer">
+                        <strong>@tajib_example</strong>
+                        <p class="video-description">Check out this awesome Tajib Tok video! #connex #rmk</p>
+                    </div>
+                </div>
+                <!-- Add more video-container divs for more posts -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration placeholder
+        // TODO: Replace with your project's config object from Firebase Console
+        const firebaseConfig = {
+            apiKey: "your-api-key-here",
+            authDomain: "your-project-id.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.getAuth(app);
+
+        // Get DOM elements
+        const loginPage = document.getElementById('loginPage');
+        const appContent = document.getElementById('appContent');
+        const loginButton = document.getElementById('loginButton');
+
+        // Google Sign-In function
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            
+            firebase.signInWithPopup(auth, provider)
+                .then((result) => {
+                    // Successful sign-in
+                    console.log("User signed in:", result.user);
+                    loginPage.style.display = 'none';
+                    appContent.style.display = 'flex'; // Show main app
+                }).catch((error) => {
+                    // Handle errors here
+                    console.error("Error during sign-in:", error);
+                    alert("Sign-in failed. Please try again.");
+                });
+        }
+
+        // Check if user is already signed in
+        firebase.onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                loginPage.style.display = 'none';
+                appContent.style.display = 'flex';
+            } else {
+                // User is signed out
+                loginPage.style.display = 'flex';
+                appContent.style.display = 'none';
+            }
+        });
+
+        // Add event listener to the sign-in button
+        loginButton.addEventListener('click', signInWithGoogle);
+    </script>
 </body>
 </html>
