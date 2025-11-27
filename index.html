@@ -389,7 +389,11 @@
             getDoc,
             getDocs,
             deleteDoc,
-            where
+            where,
+            orderBy,         // <-- ADDED
+            limit,           // <-- ADDED
+            runTransaction,  // <-- ADDED
+            increment        // <-- ADDED
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { 
             getStorage, 
@@ -441,6 +445,7 @@
         let currentUserId = null; // Store the current user's ID
         let fileToUpload = null; // Temporarily store the file selected for upload
         let currentUploadTask = null; // Store the current upload task to allow for cancellation
+        let io = null; // For IntersectionObserver auto-play
 
         // --- Notification Function ---
         function showNotification(message, type = 'success') {
@@ -452,6 +457,50 @@
             setTimeout(() => {
                 notificationToast.style.display = 'none';
             }, 3000);
+        }
+
+        // --- Utility: escape HTML (from provided code) ---
+        function escapeHtml(s){ 
+            if(!s) return ''; 
+            return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); 
+        }
+
+        // --- Utility: human-friendly time ago (from provided code) ---
+        function timeAgo(d){
+            if (!d) return '';
+            const s = Math.floor((Date.now() - d.getTime())/1000);
+            if(s < 60) return s+'s';
+            if(s < 3600) return Math.floor(s/60)+'m';
+            if(s < 86400) return Math.floor(s/3600)+'h';
+            return Math.floor(s/86400)+'d';
+        }
+
+        // --- Thumbnail generator for video files (from provided code) ---
+        async function makeVideoThumbnail(file){
+            return new Promise((resolve, reject) => {
+                try{
+                    const url = URL.createObjectURL(file);
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    video.src = url;
+                    video.muted = true;
+                    video.currentTime = 0.5; // try to grab at 0.5s
+                    video.addEventListener('loadeddata', async () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth || 480;
+                        canvas.height = video.videoHeight || 360;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        canvas.toBlob(blob => {
+                            URL.revokeObjectURL(url);
+                            video.remove();
+                            canvas.remove();
+                            resolve(blob);
+                        }, 'image/jpeg', 0.82);
+                    });
+                    video.addEventListener('error', (e)=>{ URL.revokeObjectURL(url); video.remove(); canvas.remove(); reject(e); });
+                }catch(e){reject(e)}
+            });
         }
 
         // --- Authentication ---
@@ -502,9 +551,10 @@
         // --- Firestore: Fetch Videos ---
         function fetchToks() {
             const toksCollectionRef = collection(db, "toks");
-            // TODO: Add orderBy('createdAt', 'desc') and pagination later
+            // Use the more advanced query from the provided code
+            const q = query(toksCollectionRef, orderBy('createdAt', 'desc'), limit(30));
             
-            onSnapshot(query(toksCollectionRef), (snapshot) => {
+            onSnapshot(q, (snapshot) => { // <-- Use 'q'
                 videoFeedContainer.innerHTML = ''; // Clear existing videos
                 
                 if (snapshot.empty) {
@@ -515,6 +565,10 @@
                 snapshot.forEach(doc => {
                     createVideoElement(doc.id, doc.data());
                 });
+
+                // Add the call to attach the auto-play observer
+                attachAutoPlay();
+                
             }, (error) => {
                 console.error("Error fetching toks:", error);
                 showNotification("Error loading videos.", "error");
@@ -539,53 +593,84 @@
                 } catch (e) { console.error("Error fetching user data:", e); }
             }
             
+            // --- Build Video Element ---
+            // This logic is now adapted from the 'renderPost' function
+            let mediaHtml = '';
+            const mimeType = tokData.mimeType || 'video/mp4'; // Default to video
+            
+            if (mimeType.startsWith('image/')) {
+                mediaHtml = `<img src="${tokData.videoUrl}" style="width:100%; height:100%; object-fit:cover;" alt="Tajib Tok Image">`;
+            } else {
+                mediaHtml = `
+                    <video class="video-player" 
+                           loop 
+                           muted 
+                           controls 
+                           playsinline
+                           preload="metadata"
+                           poster="${tokData.thumbUrl || ''}"
+                           data-tok-id="${tokId}">
+                        <source src="${tokData.videoUrl}" type="${mimeType}">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            }
+
+            const postTime = tokData.createdAt ? timeAgo(tokData.createdAt.toDate()) : '';
+
             videoContainer.innerHTML = `
-                <video class="video-player" loop muted controls>
-                    <source src="${tokData.videoUrl}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                ${mediaHtml}
                 <div class="video-sidebar">
                     <img src="${userAvatar}" alt="User" class="user-avatar">
                     <button class="sidebar-button like-button" data-tok-id="${tokId}">
-                        <i class="fas fa-heart"></i>
-                        <span id="like-count-${tokId}">0</span>
+                        <i class="fas fa-heart ${tokData.likedByCurrentUser ? 'liked' : ''}"></i>
+                        <span id="like-count-${tokId}">${tokData.likes || 0}</span>
                     </button>
                     <button class="sidebar-button comment-button" data-tok-id="${tokId}">
                         <i class="fas fa-comment"></i>
-                        <span id="comment-count-${tokId}">0</span>
+                        <span id="comment-count-${tokId}">${tokData.commentsCount || 0}</span>
                     </button>
                     <!-- Other buttons removed for simplicity -->
                 </div>
                 <div class="video-footer">
-                    <strong>${username}</strong>
-                    <p class="video-description">${tokData.description || ''}</p>
+                    <strong>${escapeHtml(username)}</strong>
+                    <p class="video-description">${escapeHtml(tokData.description || '')}</p>
+                    <span class="small" style="color: var(--text-muted); margin-top: 5px; display: block;">${postTime}</span>
                 </div>
             `;
             videoFeedContainer.appendChild(videoContainer);
 
-            // --- Start real-time listeners for likes and comments ---
-            // Like listener
-            const likesRef = collection(db, "toks", tokId, "likes");
-            onSnapshot(likesRef, (snap) => {
-                const likeCountEl = document.getElementById(`like-count-${tokId}`);
-                if (likeCountEl) likeCountEl.textContent = snap.size;
 
-                // Check if current user liked it
+            // --- Check if current user liked this post ---
+            // This logic replaces the old internal onSnapshot
+            if (currentUserId && tokId) {
                 const likeIcon = videoContainer.querySelector(`.like-button[data-tok-id="${tokId}"] .fa-heart`);
-                if (likeIcon && currentUserId) {
-                    const userLikeRef = doc(db, "toks", tokId, "likes", currentUserId);
-                    getDoc(userLikeRef).then(docSnap => {
-                        likeIcon.classList.toggle('liked', docSnap.exists());
-                    });
-                }
-            });
+                const userLikeRef = doc(db, "toks", tokId, "likes", currentUserId);
+                getDoc(userLikeRef).then(docSnap => {
+                    likeIcon.classList.toggle('liked', docSnap.exists());
+                });
+            }
+        }
 
-            // Comment listener
-            const commentsRef = collection(db, "toks", tokId, "comments");
-            onSnapshot(commentsRef, (snap) => {
-                const commentCountEl = document.getElementById(`comment-count-${tokId}`);
-                if (commentCountEl) commentCountEl.textContent = snap.size;
-            });
+        // --- Auto-play logic (from provided code, adapted) ---
+        function attachAutoPlay(){
+            if(io) io.disconnect();
+            
+            io = new IntersectionObserver(entries => {
+                entries.forEach(ent => {
+                    const vid = ent.target.querySelector('video');
+                    if(!vid) return;
+                    
+                    if(ent.isIntersecting && ent.intersectionRatio > 0.6){
+                        vid.play().catch(()=>{});
+                    }else{
+                        vid.pause();
+                    }
+                });
+            }, {threshold:[0.6]});
+
+            // Use .video-container (from existing UI) instead of .post
+            document.querySelectorAll('.video-container').forEach(p => io.observe(p));
         }
 
         // --- Video Interaction (Likes/Comments) ---
@@ -603,18 +688,47 @@
             }
         });
 
+        // Replaced with transaction-safe logic from provided code
         async function handleLike(tokId) {
+            if (!currentUserId) return; // Must be logged in
+            
+            const postRef = doc(db, "toks", tokId);
             const likeRef = doc(db, "toks", tokId, "likes", currentUserId);
+            const likeIcon = document.querySelector(`.like-button[data-tok-id="${tokId}"] .fa-heart`);
+            const likeCountEl = document.getElementById(`like-count-${tokId}`);
+
             try {
-                const likeDoc = await getDoc(likeRef);
-                if (likeDoc.exists()) {
-                    await deleteDoc(likeRef);
-                } else {
-                    await setDoc(likeRef, {
-                        userId: currentUserId,
-                        timestamp: serverTimestamp()
-                    });
+                await runTransaction(db, async (tx) => {
+                    const postDoc = await tx.get(postRef);
+                    const likeDoc = await tx.get(likeRef);
+
+                    if (!postDoc.exists()) {
+                        throw "Post does not exist!";
+                    }
+
+                    if (likeDoc.exists()) {
+                        // User already liked, so UNLIKE
+                        tx.delete(likeRef);
+                        tx.update(postRef, { likes: increment(-1) });
+                    } else {
+                        // User has not liked, so LIKE
+                        tx.set(likeRef, { userId: currentUserId, timestamp: serverTimestamp() });
+                        tx.update(postRef, { likes: increment(1) });
+                    }
+                });
+
+                // Optimistic UI update (optional, as onSnapshot will catch it)
+                if (likeIcon) {
+                    const currentLikes = parseInt(likeCountEl.textContent) || 0;
+                    if (likeIcon.classList.contains('liked')) {
+                        likeIcon.classList.remove('liked');
+                        likeCountEl.textContent = Math.max(0, currentLikes - 1);
+                    } else {
+                        likeIcon.classList.add('liked');
+                        likeCountEl.textContent = currentLikes + 1;
+                    }
                 }
+
             } catch (error) {
                 console.error("Error liking tok:", error);
                 showNotification("Error updating like.", "error");
@@ -627,11 +741,19 @@
             if (!commentText || commentText.trim() === "") return;
 
             const commentsCollectionRef = collection(db, "toks", tokId, "comments");
+            const postRef = doc(db, "toks", tokId);
+
+            // Add the comment
             addDoc(commentsCollectionRef, {
                 userId: currentUserId,
                 text: commentText,
                 timestamp: serverTimestamp()
-            }).catch(error => {
+            })
+            .then(() => {
+                // Increment the commentsCount on the main post doc
+                return updateDoc(postRef, { commentsCount: increment(1) });
+            })
+            .catch(error => {
                 console.error("Error adding comment:", error);
                 showNotification("Error posting comment.", "error");
             });
@@ -672,22 +794,34 @@
             uploadTok(fileToUpload, description);
         });
 
-        // 4. The Professional Upload Function
-        function uploadTok(file, description) {
+        // 4. The Professional Upload Function (REBUILT based on provided code)
+        async function uploadTok(file, description) {
             if (!currentUserId) {
                 showNotification("You must be logged in to upload.", "error");
                 return;
             }
             
+            // --- 1. Generate Thumbnail (from new code) ---
+            let thumbBlob = null;
+            const isVideo = file.type.startsWith('video/');
+            if(isVideo){
+                try {
+                    showNotification("Generating thumbnail...", "success");
+                    thumbBlob = await makeVideoThumbnail(file);
+                } catch(e) {
+                    console.warn('Thumbnail generation failed', e);
+                    showNotification("Couldn't make thumbnail, continuing...", "error");
+                }
+            }
+            
             try {
-                // 1. Show and reset progress bar
+                // --- 2. Show progress and create file refs ---
                 progressContainer.style.display = 'block';
                 progressBar.style.width = '0%';
                 progressText.textContent = 'Uploading... 0%';
 
-                // 2. Create a unique storage reference
-                const filePath = `toks/${currentUserId}/${Date.now()}-${file.name}`;
-                const fileRef = storageRef(storage, filePath);
+                const basePath = `toks/${currentUserId}/${Date.now()}-${file.name}`;
+                const fileRef = storageRef(storage, basePath);
                 
                 // 3. Create the resumable upload task
                 currentUploadTask = uploadBytesResumable(fileRef, file);
@@ -711,10 +845,39 @@
                     () => {
                         // --- Complete ---
                         progressText.textContent = 'Processing...';
+                        
                         // Get the download URL
-                        getDownloadURL(currentUploadTask.snapshot.ref).then((videoUrl) => {
-                            // Add the video info to Firestore
-                            createTokFirestoreDocument(videoUrl, filePath, description);
+                        getDownloadURL(currentUploadTask.snapshot.ref).then(async (videoUrl) => {
+                            
+                            // --- 5. Upload thumbnail (from new code) ---
+                            let thumbURL = null;
+                            if(thumbBlob){
+                                try {
+                                    progressText.textContent = 'Uploading thumbnail...';
+                                    const thumbRef = storageRef(storage, basePath + '_thumb.jpg');
+                                    const tTask = uploadBytesResumable(thumbRef, thumbBlob);
+                                    
+                                    // Wait for thumbnail upload to complete
+                                    await new Promise((resolve, reject) => {
+                                        tTask.on('state_changed', 
+                                            () => {}, // no progress for this
+                                            reject,   // on error
+                                            async () => {
+                                                thumbURL = await getDownloadURL(tTask.snapshot.ref);
+                                                resolve();
+                                            }
+                                        );
+                                    });
+                                } catch (e) {
+                                    console.error("Thumbnail upload failed:", e);
+                                    showNotification("Video uploaded, but thumbnail failed.", "error");
+                                }
+                            }
+
+                            // --- 6. Add the video info to Firestore ---
+                            // We pass the 'file' object to save its metadata
+                            createTokFirestoreDocument(videoUrl, thumbURL, basePath, description, file);
+
                         }).catch(error => {
                             console.error("Error getting download URL:", error);
                             showNotification("Upload failed (URL error).", "error");
@@ -729,17 +892,27 @@
             }
         }
 
-        // 5. Helper function to create the Firestore document
-        async function createTokFirestoreDocument(videoUrl, storagePath, description) {
+        // 5. Helper function to create the Firestore document (MODIFIED)
+        async function createTokFirestoreDocument(videoUrl, thumbUrl, storagePath, description, file) {
             try {
                 const toksCollectionRef = collection(db, "toks");
-                await addDoc(toksCollectionRef, {
+                
+                // Add new metadata from the provided code's logic
+                const metadata = {
                     userId: currentUserId,
                     videoUrl: videoUrl,
+                    thumbUrl: thumbUrl || null,
                     storagePath: storagePath,
                     description: description || "",
-                    createdAt: serverTimestamp()
-                });
+                    createdAt: serverTimestamp(),
+                    // Add metadata from the new logic
+                    mimeType: file.type,
+                    size: file.size,
+                    likes: 0,
+                    commentsCount: 0
+                };
+
+                await addDoc(toksCollectionRef, metadata);
 
                 showNotification("Upload successful!", "success");
             } catch (error) {
