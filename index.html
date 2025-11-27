@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tajib Tok</title>
-    <!-- Firebase App and Authentication SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js"></script>
-    <script src="https://gstatic.com/firebasejs/11.0.1/firebase-auth.js"></script>
+    
+    <!-- We will use the modern Firebase SDKs (v11.x.x) as module scripts -->
+    <!-- This requires changing the <script> tag at the bottom to type="module" -->
+    
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -31,6 +32,8 @@
             display: flex;
             flex-direction: column;
             border-right: 1px solid #2f2f2f;
+            background: #0a0a0a;
+            z-index: 10;
         }
         .logo {
             font-size: 24px;
@@ -44,12 +47,33 @@
             border: none;
             border-radius: 20px;
             color: #fff;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 14px;
         }
         .search-bar::placeholder {
             color: #aaa;
         }
+
+        /* New Upload Button Styling */
+        .upload-button {
+            padding: 10px 15px;
+            background-color: #69c9d0;
+            color: #000;
+            border: none;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .upload-button:hover {
+            background-color: #88e0e6;
+        }
+        #upload-input {
+            display: none; /* Hidden file input */
+        }
+
         /* Main Content & Video Feed Styling */
         .main-content {
             flex: 1;
@@ -65,10 +89,11 @@
         .video-container {
             position: relative;
             height: 85vh;
-            margin-bottom: 10px;
+            margin: 10px 0;
             scroll-snap-align: start;
             border-radius: 10px;
             overflow: hidden;
+            background: #1a1a1a;
         }
         .video-player {
             width: 100%;
@@ -98,6 +123,9 @@
         }
         .sidebar-button i {
             font-size: 28px;
+        }
+        .sidebar-button .fa-heart.liked {
+            color: #fe2c55; /* TikTok red for liked */
         }
         .user-avatar {
             width: 50px;
@@ -132,7 +160,7 @@
             z-index: 100;
         }
         #loginButton {
-            background-color #69c9d0;
+            background-color: #69c9d0;
             color: #000;
             border: none;
             padding: 12px 30px;
@@ -155,34 +183,44 @@
     </div>
 
     <!-- Main App (initially hidden) -->
-    <div id="appContent" style="display: none;">
+    <div id="appContent" style="display: none; width: 100%; height: 100%;">
         <!-- Left Sidebar -->
         <div class="sidebar">
             <div class="logo">Tajib Tok</div>
             <input type="text" class="search-bar" placeholder="Search for tajibs...">
+            
+            <!-- Upload Button and hidden file input -->
+            <label for="upload-input" class="upload-button">
+                <i class="fas fa-plus"></i> Upload Tok
+            </label>
+            <input type="file" id="upload-input" accept="video/*">
+            
             <!-- Navigation links can be added here later -->
         </div>
 
         <!-- Main Vertical Video Feed -->
         <div class="main-content">
-            <div class="video-feed">
-                <!-- Video Post 1 -->
+            <div class="video-feed" id="video-feed-container">
+                <!-- 
+                  Videos from Firestore will be dynamically added here.
+                  This is a placeholder example.
+                -->
                 <div class="video-container">
-                    <video class="video-player" loop muted>
+                    <video class="video-player" loop muted controls>
                         <!-- Replace with your video source -->
-                        <source src="placeholder-video1.mp4" type="video/mp4">
+                        <source src="https://placehold.co/400x700.mp4?text=Sample+Video" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
                     <!-- Video Interaction Sidebar -->
                     <div class="video-sidebar">
-                        <img src="https://i.pravatar.cc/150?img=12" alt="User" class="user-avatar">
-                        <button class="sidebar-button">
+                        <img src="https://placehold.co/100x100/png?text=User" alt="User" class="user-avatar">
+                        <button class="sidebar-button" data-tok-id="example1">
                             <i class="fas fa-heart"></i>
-                            <span>2.1K</span>
+                            <span id="like-count-example1">0</span>
                         </button>
-                        <button class="sidebar-button">
+                        <button class="sidebar-button" data-tok-id="example1">
                             <i class="fas fa-comment"></i>
-                            <span>350</span>
+                            <span id="comment-count-example1">0</span>
                         </button>
                         <button class="sidebar-button">
                             <i class="fas fa-bookmark"></i>
@@ -195,61 +233,104 @@
                     </div>
                     <!-- Video Footer/Description -->
                     <div class="video-footer">
-                        <strong>@tajib_example</strong>
-                        <p class="video-description">Check out this awesome Tajib Tok video! #connex #rmk</p>
+                        <strong>@username</strong>
+                        <p class="video-description">This is where the video description will go. #hashtag</p>
                     </div>
                 </div>
-                <!-- Add more video-container divs for more posts -->
             </div>
         </div>
     </div>
 
-    <script>
-        // Firebase configuration placeholder
-        // TODO: Replace with your project's config object from Firebase Console
+    <!-- Use type="module" to support modern ES6 imports -->
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+        import { 
+            getAuth, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore,
+            doc,
+            setDoc,
+            addDoc,
+            collection,
+            onSnapshot,
+            query,
+            serverTimestamp,
+            getDocs
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { 
+            getStorage, 
+            ref as storageRef, 
+            uploadBytes, 
+            getDownloadURL 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        // Your web app's Firebase configuration (as provided in your prompt)
         const firebaseConfig = {
-            apiKey: "your-api-key-here",
-            authDomain: "your-project-id.firebaseapp.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "your-app-id"
+            apiKey: "AIzaSyBvZaTSLiIiLcYldThxSD0KZ1oFb4MfpYQ",
+            authDomain: "jibatnoodle.firebaseapp.com",
+            projectId: "jibatnoodle",
+            storageBucket: "jibatnoodle.firebasestorage.app",
+            messagingSenderId: "1004130021308",
+            appId: "1:1004130021308:web:a9f94954419024e4cc05b9",
+            measurementId: "G-6ZL3PYFW4V"
         };
 
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const auth = firebase.getAuth(app);
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        // Get DOM elements
+        // --- DOM Elements ---
         const loginPage = document.getElementById('loginPage');
         const appContent = document.getElementById('appContent');
         const loginButton = document.getElementById('loginButton');
+        const uploadInput = document.getElementById('upload-input');
+        const videoFeedContainer = document.getElementById('video-feed-container');
 
-        // Google Sign-In function
+        let currentUserId = null; // Store the current user's ID
+
+        // --- Authentication ---
+
+        // Google Sign-In function (v9+ modular API)
         function signInWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            
-            firebase.signInWithPopup(auth, provider)
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider)
                 .then((result) => {
-                    // Successful sign-in
                     console.log("User signed in:", result.user);
-                    loginPage.style.display = 'none';
-                    appContent.style.display = 'flex'; // Show main app
+                    // User is signed in, onAuthStateChanged will handle UI toggle
                 }).catch((error) => {
-                    // Handle errors here
                     console.error("Error during sign-in:", error);
                     alert("Sign-in failed. Please try again.");
                 });
         }
 
-        // Check if user is already signed in
-        firebase.onAuthStateChanged(auth, (user) => {
+        // Check if user is already signed in (v9+ modular API)
+        onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is signed in
+                console.log("Auth state changed: User is in", user.uid);
+                currentUserId = user.uid;
                 loginPage.style.display = 'none';
                 appContent.style.display = 'flex';
+                
+                // Save user to 'users' collection in Firestore
+                saveUserToFirestore(user);
+                
+                // Fetch videos
+                fetchToks();
             } else {
                 // User is signed out
+                console.log("Auth state changed: User is out");
+                currentUserId = null;
                 loginPage.style.display = 'flex';
                 appContent.style.display = 'none';
             }
@@ -257,6 +338,233 @@
 
         // Add event listener to the sign-in button
         loginButton.addEventListener('click', signInWithGoogle);
+
+        // --- Firestore Database Functions ---
+
+        // Function to save user data to 'users' collection
+        async function saveUserToFirestore(user) {
+            // Reference to the 'users' collection, document ID is user's UID
+            const userRef = doc(db, "users", user.uid); 
+            
+            const userData = {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastLogin: serverTimestamp() // Tracks when they last logged in
+            };
+
+            try {
+                // setDoc with { merge: true } will create or update the document
+                await setDoc(userRef, userData, { merge: true });
+                console.log("User saved to Firestore:", user.uid);
+            } catch (error) {
+                console.error("Error saving user to Firestore:", error);
+            }
+        }
+
+        // Function to fetch videos from 'toks' collection
+        function fetchToks() {
+            const toksCollectionRef = collection(db, "toks");
+            
+            // Use onSnapshot for real-time updates
+            onSnapshot(query(toksCollectionRef), (snapshot) => {
+                console.log("Fetched toks:", snapshot.docs.length);
+                videoFeedContainer.innerHTML = ''; // Clear existing videos
+                
+                if (snapshot.empty) {
+                    videoFeedContainer.innerHTML = '<p style="text-align: center; padding: 20px;">No toks yet. Be the first to upload!</p>';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const tokData = doc.data();
+                    const tokId = doc.id;
+                    createVideoElement(tokId, tokData);
+                });
+            });
+        }
+
+        // Function to create and append video elements to the feed
+        async function createVideoElement(tokId, tokData) {
+            const videoContainer = document.createElement('div');
+            videoContainer.className = 'video-container';
+
+            // Get user data for the video
+            let username = '@unknown';
+            let userAvatar = 'https://placehold.co/100x100/png?text=?';
+            if (tokData.userId) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", tokData.userId));
+                    if (userDoc.exists()) {
+                        username = userDoc.data().displayName || '@username';
+                        userAvatar = userDoc.data().photoURL || userAvatar;
+                    }
+                } catch (e) { console.error("Error fetching user data:", e); }
+            }
+            
+            // --- Get Like and Comment Counts ---
+            // In a real app, you'd listen to these sub-collections directly.
+            // For simplicity, we'll just show placeholders or you can store counts on the tok doc.
+            // Let's get real-time counts.
+            
+            let likeCount = 0;
+            const likesRef = collection(db, "toks", tokId, "likes");
+            onSnapshot(likesRef, (snap) => {
+                document.getElementById(`like-count-${tokId}`).textContent = snap.size;
+                // Check if current user liked it
+                const likeIcon = document.querySelector(`.sidebar-button[data-tok-id="${tokId}"] .fa-heart`);
+                if (likeIcon) {
+                    const userLikeQuery = query(likesRef, where("userId", "==", currentUserId));
+                    getDocs(userLikeQuery).then(likeSnap => {
+                        likeIcon.classList.toggle('liked', !likeSnap.empty);
+                    });
+                }
+            });
+
+            let commentCount = 0;
+            const commentsRef = collection(db, "toks", tokId, "comments");
+             onSnapshot(commentsRef, (snap) => {
+                document.getElementById(`comment-count-${tokId}`).textContent = snap.size;
+            });
+
+
+            videoContainer.innerHTML = `
+                <video class="video-player" loop muted controls>
+                    <source src="${tokData.videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="video-sidebar">
+                    <img src="${userAvatar}" alt="User" class="user-avatar">
+                    <button class="sidebar-button like-button" data-tok-id="${tokId}">
+                        <i class="fas fa-heart"></i>
+                        <span id="like-count-${tokId}">...</span>
+                    </button>
+                    <button class="sidebar-button comment-button" data-tok-id="${tokId}">
+                        <i class="fas fa-comment"></i>
+                        <span id="comment-count-${tokId}">...</span>
+                    </button>
+                    <button class="sidebar-button">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Save</span>
+                    </button>
+                    <button class="sidebar-button">
+                        <i class="fas fa-share"></i>
+                        <span>Share</span>
+                    </button>
+                </div>
+                <div class="video-footer">
+                    <strong>${username}</strong>
+                    <p class="video-description">${tokData.description || ''}</p>
+                </div>
+            `;
+            videoFeedContainer.appendChild(videoContainer);
+        }
+
+        // --- Handle Clicks (Like/Comment) using Event Delegation ---
+        videoFeedContainer.addEventListener('click', (e) => {
+            const button = e.target.closest('.sidebar-button');
+            if (!button || !currentUserId) return; // Not a button or not logged in
+
+            const tokId = button.dataset.tokId;
+            if (!tokId) return;
+
+            if (button.classList.contains('like-button')) {
+                handleLike(tokId);
+            } else if (button.classList.contains('comment-button')) {
+                handleComment(tokId);
+            }
+        });
+
+        // Function to add/remove a like
+        async function handleLike(tokId) {
+            const likeRef = doc(db, "toks", tokId, "likes", currentUserId);
+            try {
+                const likeDoc = await getDoc(likeRef);
+                if (likeDoc.exists()) {
+                    // User already liked, so unlike
+                    await deleteDoc(likeRef);
+                    console.log("Unliked tok:", tokId);
+                } else {
+                    // User hasn't liked, so add like
+                    await setDoc(likeRef, {
+                        userId: currentUserId,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Liked tok:", tokId);
+                }
+            } catch (error) {
+                console.error("Error liking tok:", error);
+            }
+        }
+
+        // Function to add a comment (placeholder)
+        function handleComment(tokId) {
+            const commentText = prompt("Enter your comment:");
+            if (!commentText || commentText.trim() === "") return;
+
+            const commentsCollectionRef = collection(db, "toks", tokId, "comments");
+            
+            addDoc(commentsCollectionRef, {
+                userId: currentUserId,
+                text: commentText,
+                timestamp: serverTimestamp()
+            }).then(() => {
+                console.log("Comment added!");
+            }).catch(error => {
+                console.error("Error adding comment:", error);
+            });
+        }
+
+
+        // --- Firebase Storage Functions ---
+
+        // Listen for file upload
+        uploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                uploadTok(file);
+            }
+        });
+
+        async function uploadTok(file) {
+            if (!currentUserId) {
+                alert("You must be logged in to upload.");
+                return;
+            }
+
+            const description = prompt("Enter a description for your Tok:");
+            
+            try {
+                // 1. Upload video file to Firebase Storage
+                const filePath = `toks/${currentUserId}/${Date.now()}-${file.name}`;
+                const fileRef = storageRef(storage, filePath);
+                
+                alert("Uploading video... please wait.");
+                console.log("Uploading video to", filePath);
+                const uploadTask = await uploadBytes(fileRef, file);
+                const videoUrl = await getDownloadURL(uploadTask.ref);
+                console.log("File available at", videoUrl);
+
+                // 2. Create document in Firestore 'toks' collection
+                const toksCollectionRef = collection(db, "toks");
+                await addDoc(toksCollectionRef, {
+                    userId: currentUserId,
+                    videoUrl: videoUrl,
+                    storagePath: filePath,
+                    description: description || "",
+                    createdAt: serverTimestamp()
+                });
+
+                alert("Upload successful!");
+                console.log("Tok document created in Firestore.");
+            
+            } catch (error) {
+                console.error("Upload failed:", error);
+                alert("Upload failed. Please try again.");
+            }
+        }
+
     </script>
 </body>
 </html>
