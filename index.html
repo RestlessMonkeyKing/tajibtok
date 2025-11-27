@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tajib Tok</title>
     
-    <!-- We will use the modern Firebase SDKs (v11.x.x) as module scripts -->
-    <!-- This requires changing the <script> tag at the bottom to type="module" -->
-    
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -16,7 +13,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         body {
             background: #000;
@@ -39,26 +36,33 @@
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 30px;
-            color: #69c9d0; /* TikTok-like teal */
+            color: #69c9d0;
+            text-align: center;
         }
         .search-bar {
-            padding: 10px 15px;
+            padding: 12px 15px;
             background: #2f2f2f;
             border: none;
             border-radius: 20px;
             color: #fff;
             margin-bottom: 20px;
             font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .search-bar:focus {
+            outline: none;
+            background: #3f3f3f;
+            box-shadow: 0 0 0 2px #69c9d0;
         }
         .search-bar::placeholder {
             color: #aaa;
         }
 
-        /* New Upload Button Styling */
+        /* Upload Button Styling */
         .upload-button {
-            padding: 10px 15px;
-            background-color: #69c9d0;
-            color: #000;
+            padding: 12px 15px;
+            background: linear-gradient(45deg, #69c9d0, #fe2c55);
+            color: #fff;
             border: none;
             border-radius: 20px;
             font-weight: bold;
@@ -66,12 +70,46 @@
             text-align: center;
             font-size: 14px;
             margin-bottom: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .upload-button:hover {
-            background-color: #88e0e6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(105, 201, 208, 0.3);
         }
         #upload-input {
-            display: none; /* Hidden file input */
+            display: none;
+        }
+
+        /* User Info Styling */
+        .user-info {
+            margin-top: auto;
+            padding: 15px 0;
+            border-top: 1px solid #2f2f2f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .user-name {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .logout-button {
+            background: none;
+            border: none;
+            color: #69c9d0;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: auto;
         }
 
         /* Main Content & Video Feed Styling */
@@ -81,6 +119,7 @@
             justify-content: center;
             overflow-y: scroll;
             scroll-snap-type: y mandatory;
+            background: #000;
         }
         .video-feed {
             width: 400px;
@@ -120,12 +159,22 @@
             color: #fff;
             cursor: pointer;
             font-size: 14px;
+            transition: all 0.3s ease;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .sidebar-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
         }
         .sidebar-button i {
             font-size: 28px;
         }
         .sidebar-button .fa-heart.liked {
-            color: #fe2c55; /* TikTok red for liked */
+            color: #fe2c55;
+        }
+        .sidebar-button .fa-bookmark.saved {
+            color: #69c9d0;
         }
         .user-avatar {
             width: 50px;
@@ -133,6 +182,10 @@
             border-radius: 50%;
             border: 2px solid #fff;
             object-fit: cover;
+            transition: all 0.3s ease;
+        }
+        .user-avatar:hover {
+            transform: scale(1.1);
         }
         /* Video Footer (Description) */
         .video-footer {
@@ -143,8 +196,18 @@
         }
         .video-description {
             font-size: 15px;
-            margin-top: 10px;
+            margin-top: 8px;
+            line-height: 1.4;
         }
+        .video-music {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #ccc;
+        }
+
         /* Login Page Styling */
         #loginPage {
             display: flex;
@@ -153,33 +216,94 @@
             align-items: center;
             height: 100vh;
             width: 100vw;
-            background: #000;
+            background: linear-gradient(135deg, #000000, #1a1a2e, #16213e);
             position: absolute;
             top: 0;
             left: 0;
             z-index: 100;
         }
-        #loginButton {
-            background-color: #69c9d0;
-            color: #000;
-            border: none;
-            padding: 12px 30px;
-            font-size: 16px;
+        .login-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
             border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .login-container h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #69c9d0, #fe2c55);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .login-container p {
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+        #loginButton {
+            background: linear-gradient(45deg, #69c9d0, #fe2c55);
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 16px;
+            border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
-            margin-top: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #loginButton:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(105, 201, 208, 0.4);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #69c9d0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(105, 201, 208, 0.3);
+            border-top: 4px solid #69c9d0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #69c9d0;
         }
     </style>
 </head>
 <body>
     <!-- Login Screen (initially shown) -->
     <div id="loginPage">
-        <h1>Welcome to Tajib Tok</h1>
-        <p>Made by Connex and RMK</p>
-        <button id="loginButton">
-            <i class="fab fa-google"></i> Sign in with Google
-        </button>
+        <div class="login-container">
+            <h1>Welcome to Tajib Tok</h1>
+            <p>Made by Connex and RMK</p>
+            <button id="loginButton">
+                <i class="fab fa-google"></i> Sign in with Google
+            </button>
+        </div>
     </div>
 
     <!-- Main App (initially hidden) -->
@@ -187,7 +311,7 @@
         <!-- Left Sidebar -->
         <div class="sidebar">
             <div class="logo">Tajib Tok</div>
-            <input type="text" class="search-bar" placeholder="Search for tajibs...">
+            <input type="text" class="search-bar" placeholder="Search for tajibs..." id="searchInput">
             
             <!-- Upload Button and hidden file input -->
             <label for="upload-input" class="upload-button">
@@ -195,47 +319,22 @@
             </label>
             <input type="file" id="upload-input" accept="video/*">
             
-            <!-- Navigation links can be added here later -->
+            <!-- User Info Section -->
+            <div class="user-info" id="userInfo">
+                <img src="" alt="User" class="user-avatar-small" id="userAvatar">
+                <div>
+                    <div class="user-name" id="userDisplayName"></div>
+                    <button class="logout-button" id="logoutButton">Logout</button>
+                </div>
+            </div>
         </div>
 
         <!-- Main Vertical Video Feed -->
         <div class="main-content">
             <div class="video-feed" id="video-feed-container">
-                <!-- 
-                  Videos from Firestore will be dynamically added here.
-                  This is a placeholder example.
-                -->
-                <div class="video-container">
-                    <video class="video-player" loop muted controls>
-                        <!-- Replace with your video source -->
-                        <source src="https://placehold.co/400x700.mp4?text=Sample+Video" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <!-- Video Interaction Sidebar -->
-                    <div class="video-sidebar">
-                        <img src="https://placehold.co/100x100/png?text=User" alt="User" class="user-avatar">
-                        <button class="sidebar-button" data-tok-id="example1">
-                            <i class="fas fa-heart"></i>
-                            <span id="like-count-example1">0</span>
-                        </button>
-                        <button class="sidebar-button" data-tok-id="example1">
-                            <i class="fas fa-comment"></i>
-                            <span id="comment-count-example1">0</span>
-                        </button>
-                        <button class="sidebar-button">
-                            <i class="fas fa-bookmark"></i>
-                            <span>Save</span>
-                        </button>
-                        <button class="sidebar-button">
-                            <i class="fas fa-share"></i>
-                            <span>Share</span>
-                        </button>
-                    </div>
-                    <!-- Video Footer/Description -->
-                    <div class="video-footer">
-                        <strong>@username</strong>
-                        <p class="video-description">This is where the video description will go. #hashtag</p>
-                    </div>
+                <!-- Videos will be dynamically added here -->
+                <div class="loading">
+                    <div class="spinner"></div>
                 </div>
             </div>
         </div>
@@ -261,8 +360,14 @@
             collection,
             onSnapshot,
             query,
+            orderBy,
             serverTimestamp,
-            getDocs
+            getDoc,
+            getDocs,
+            deleteDoc,
+            updateDoc,
+            increment,
+            where
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { 
             getStorage, 
@@ -271,7 +376,7 @@
             getDownloadURL 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-        // Your web app's Firebase configuration (as provided in your prompt)
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBvZaTSLiIiLcYldThxSD0KZ1oFb4MfpYQ",
             authDomain: "jibatnoodle.firebaseapp.com",
@@ -295,26 +400,41 @@
         const loginButton = document.getElementById('loginButton');
         const uploadInput = document.getElementById('upload-input');
         const videoFeedContainer = document.getElementById('video-feed-container');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userDisplayName = document.getElementById('userDisplayName');
+        const logoutButton = document.getElementById('logoutButton');
+        const searchInput = document.getElementById('searchInput');
 
-        let currentUserId = null; // Store the current user's ID
+        let currentUserId = null;
+        let currentUserData = null;
+        let unsubscribeToks = null;
 
         // --- Authentication ---
 
-        // Google Sign-In function (v9+ modular API)
+        // Google Sign-In function
         function signInWithGoogle() {
             const provider = new GoogleAuthProvider();
             signInWithPopup(auth, provider)
                 .then((result) => {
                     console.log("User signed in:", result.user);
-                    // User is signed in, onAuthStateChanged will handle UI toggle
                 }).catch((error) => {
                     console.error("Error during sign-in:", error);
                     alert("Sign-in failed. Please try again.");
                 });
         }
 
-        // Check if user is already signed in (v9+ modular API)
-        onAuthStateChanged(auth, (user) => {
+        // Sign out function
+        function signOutUser() {
+            signOut(auth).then(() => {
+                console.log("User signed out");
+            }).catch((error) => {
+                console.error("Error signing out:", error);
+            });
+        }
+
+        // Check if user is already signed in
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // User is signed in
                 console.log("Auth state changed: User is in", user.uid);
@@ -323,7 +443,11 @@
                 appContent.style.display = 'flex';
                 
                 // Save user to 'users' collection in Firestore
-                saveUserToFirestore(user);
+                await saveUserToFirestore(user);
+                currentUserData = await getUserData(user.uid);
+                
+                // Update user info in sidebar
+                updateUserInfo(user);
                 
                 // Fetch videos
                 fetchToks();
@@ -331,19 +455,25 @@
                 // User is signed out
                 console.log("Auth state changed: User is out");
                 currentUserId = null;
+                currentUserData = null;
                 loginPage.style.display = 'flex';
                 appContent.style.display = 'none';
+                
+                // Unsubscribe from real-time updates
+                if (unsubscribeToks) {
+                    unsubscribeToks();
+                }
             }
         });
 
-        // Add event listener to the sign-in button
+        // Add event listeners
         loginButton.addEventListener('click', signInWithGoogle);
+        logoutButton.addEventListener('click', signOutUser);
 
         // --- Firestore Database Functions ---
 
         // Function to save user data to 'users' collection
         async function saveUserToFirestore(user) {
-            // Reference to the 'users' collection, document ID is user's UID
             const userRef = doc(db, "users", user.uid); 
             
             const userData = {
@@ -351,11 +481,10 @@
                 displayName: user.displayName,
                 email: user.email,
                 photoURL: user.photoURL,
-                lastLogin: serverTimestamp() // Tracks when they last logged in
+                lastLogin: serverTimestamp()
             };
 
             try {
-                // setDoc with { merge: true } will create or update the document
                 await setDoc(userRef, userData, { merge: true });
                 console.log("User saved to Firestore:", user.uid);
             } catch (error) {
@@ -363,25 +492,51 @@
             }
         }
 
-        // Function to fetch videos from 'toks' collection
+        // Function to get user data
+        async function getUserData(userId) {
+            try {
+                const userDoc = await getDoc(doc(db, "users", userId));
+                if (userDoc.exists()) {
+                    return userDoc.data();
+                }
+                return null;
+            } catch (error) {
+                console.error("Error getting user data:", error);
+                return null;
+            }
+        }
+
+        // Function to fetch videos from 'toks' collection with real-time updates
         function fetchToks() {
             const toksCollectionRef = collection(db, "toks");
+            const toksQuery = query(toksCollectionRef, orderBy("createdAt", "desc"));
             
             // Use onSnapshot for real-time updates
-            onSnapshot(query(toksCollectionRef), (snapshot) => {
+            unsubscribeToks = onSnapshot(toksQuery, async (snapshot) => {
                 console.log("Fetched toks:", snapshot.docs.length);
-                videoFeedContainer.innerHTML = ''; // Clear existing videos
                 
                 if (snapshot.empty) {
-                    videoFeedContainer.innerHTML = '<p style="text-align: center; padding: 20px;">No toks yet. Be the first to upload!</p>';
+                    videoFeedContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-video-slash"></i>
+                            <h3>No Tajibs Yet</h3>
+                            <p>Be the first to upload a video!</p>
+                        </div>
+                    `;
                     return;
                 }
                 
-                snapshot.forEach(doc => {
+                videoFeedContainer.innerHTML = '';
+                
+                // Process each document
+                for (const doc of snapshot.docs) {
                     const tokData = doc.data();
                     const tokId = doc.id;
-                    createVideoElement(tokId, tokData);
-                });
+                    await createVideoElement(tokId, tokData);
+                }
+            }, (error) => {
+                console.error("Error fetching toks:", error);
+                videoFeedContainer.innerHTML = '<div class="loading">Error loading videos</div>';
             });
         }
 
@@ -389,66 +544,59 @@
         async function createVideoElement(tokId, tokData) {
             const videoContainer = document.createElement('div');
             videoContainer.className = 'video-container';
+            videoContainer.id = `tok-${tokId}`;
 
             // Get user data for the video
             let username = '@unknown';
-            let userAvatar = 'https://placehold.co/100x100/png?text=?';
+            let userAvatarUrl = 'https://placehold.co/100x100/2f2f2f/fff?text=?';
             if (tokData.userId) {
                 try {
                     const userDoc = await getDoc(doc(db, "users", tokData.userId));
                     if (userDoc.exists()) {
-                        username = userDoc.data().displayName || '@username';
-                        userAvatar = userDoc.data().photoURL || userAvatar;
+                        const userData = userDoc.data();
+                        username = userData.displayName || '@username';
+                        userAvatarUrl = userData.photoURL || userAvatarUrl;
                     }
-                } catch (e) { console.error("Error fetching user data:", e); }
+                } catch (e) { 
+                    console.error("Error fetching user data:", e); 
+                }
             }
             
-            // --- Get Like and Comment Counts ---
-            // In a real app, you'd listen to these sub-collections directly.
-            // For simplicity, we'll just show placeholders or you can store counts on the tok doc.
-            // Let's get real-time counts.
-            
-            let likeCount = 0;
-            const likesRef = collection(db, "toks", tokId, "likes");
-            onSnapshot(likesRef, (snap) => {
-                document.getElementById(`like-count-${tokId}`).textContent = snap.size;
-                // Check if current user liked it
-                const likeIcon = document.querySelector(`.sidebar-button[data-tok-id="${tokId}"] .fa-heart`);
-                if (likeIcon) {
-                    const userLikeQuery = query(likesRef, where("userId", "==", currentUserId));
-                    getDocs(userLikeQuery).then(likeSnap => {
-                        likeIcon.classList.toggle('liked', !likeSnap.empty);
-                    });
+            // Check if current user has liked this tok
+            let isLiked = false;
+            let isSaved = false;
+            if (currentUserId) {
+                try {
+                    const likeDoc = await getDoc(doc(db, "toks", tokId, "likes", currentUserId));
+                    isLiked = likeDoc.exists();
+                    
+                    const saveDoc = await getDoc(doc(db, "users", currentUserId, "saved", tokId));
+                    isSaved = saveDoc.exists();
+                } catch (e) {
+                    console.error("Error checking like/save status:", e);
                 }
-            });
-
-            let commentCount = 0;
-            const commentsRef = collection(db, "toks", tokId, "comments");
-             onSnapshot(commentsRef, (snap) => {
-                document.getElementById(`comment-count-${tokId}`).textContent = snap.size;
-            });
-
+            }
 
             videoContainer.innerHTML = `
-                <video class="video-player" loop muted controls>
+                <video class="video-player" loop muted playsinline>
                     <source src="${tokData.videoUrl}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="video-sidebar">
-                    <img src="${userAvatar}" alt="User" class="user-avatar">
+                    <img src="${userAvatarUrl}" alt="User" class="user-avatar">
                     <button class="sidebar-button like-button" data-tok-id="${tokId}">
-                        <i class="fas fa-heart"></i>
-                        <span id="like-count-${tokId}">...</span>
+                        <i class="fas fa-heart ${isLiked ? 'liked' : ''}"></i>
+                        <span id="like-count-${tokId}">${tokData.likesCount || 0}</span>
                     </button>
                     <button class="sidebar-button comment-button" data-tok-id="${tokId}">
                         <i class="fas fa-comment"></i>
-                        <span id="comment-count-${tokId}">...</span>
+                        <span id="comment-count-${tokId}">${tokData.commentsCount || 0}</span>
                     </button>
-                    <button class="sidebar-button">
-                        <i class="fas fa-bookmark"></i>
+                    <button class="sidebar-button save-button" data-tok-id="${tokId}">
+                        <i class="fas fa-bookmark ${isSaved ? 'saved' : ''}"></i>
                         <span>Save</span>
                     </button>
-                    <button class="sidebar-button">
+                    <button class="sidebar-button share-button" data-tok-id="${tokId}">
                         <i class="fas fa-share"></i>
                         <span>Share</span>
                     </button>
@@ -456,40 +604,73 @@
                 <div class="video-footer">
                     <strong>${username}</strong>
                     <p class="video-description">${tokData.description || ''}</p>
+                    <div class="video-music">
+                        <i class="fas fa-music"></i>
+                        <span>Original Sound</span>
+                    </div>
                 </div>
             `;
+            
             videoFeedContainer.appendChild(videoContainer);
+            
+            // Auto-play video when it's in view
+            const video = videoContainer.querySelector('.video-player');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        video.play().catch(e => console.log("Autoplay prevented:", e));
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, { threshold: 0.8 });
+            
+            observer.observe(videoContainer);
         }
 
-        // --- Handle Clicks (Like/Comment) using Event Delegation ---
-        videoFeedContainer.addEventListener('click', (e) => {
+        // --- Interaction Handlers ---
+
+        // Handle video interactions using event delegation
+        videoFeedContainer.addEventListener('click', async (e) => {
             const button = e.target.closest('.sidebar-button');
-            if (!button || !currentUserId) return; // Not a button or not logged in
+            if (!button || !currentUserId) return;
 
             const tokId = button.dataset.tokId;
             if (!tokId) return;
 
             if (button.classList.contains('like-button')) {
-                handleLike(tokId);
+                await handleLike(tokId);
             } else if (button.classList.contains('comment-button')) {
-                handleComment(tokId);
+                await handleComment(tokId);
+            } else if (button.classList.contains('save-button')) {
+                await handleSave(tokId);
+            } else if (button.classList.contains('share-button')) {
+                await handleShare(tokId);
             }
         });
 
         // Function to add/remove a like
         async function handleLike(tokId) {
             const likeRef = doc(db, "toks", tokId, "likes", currentUserId);
+            const tokRef = doc(db, "toks", tokId);
+            
             try {
                 const likeDoc = await getDoc(likeRef);
                 if (likeDoc.exists()) {
                     // User already liked, so unlike
                     await deleteDoc(likeRef);
+                    await updateDoc(tokRef, {
+                        likesCount: increment(-1)
+                    });
                     console.log("Unliked tok:", tokId);
                 } else {
                     // User hasn't liked, so add like
                     await setDoc(likeRef, {
                         userId: currentUserId,
                         timestamp: serverTimestamp()
+                    });
+                    await updateDoc(tokRef, {
+                        likesCount: increment(1)
                     });
                     console.log("Liked tok:", tokId);
                 }
@@ -498,24 +679,84 @@
             }
         }
 
-        // Function to add a comment (placeholder)
-        function handleComment(tokId) {
+        // Function to add a comment
+        async function handleComment(tokId) {
             const commentText = prompt("Enter your comment:");
             if (!commentText || commentText.trim() === "") return;
 
             const commentsCollectionRef = collection(db, "toks", tokId, "comments");
+            const tokRef = doc(db, "toks", tokId);
             
-            addDoc(commentsCollectionRef, {
-                userId: currentUserId,
-                text: commentText,
-                timestamp: serverTimestamp()
-            }).then(() => {
+            try {
+                await addDoc(commentsCollectionRef, {
+                    userId: currentUserId,
+                    userDisplayName: currentUserData?.displayName || 'Anonymous',
+                    userPhotoURL: currentUserData?.photoURL || '',
+                    text: commentText.trim(),
+                    timestamp: serverTimestamp()
+                });
+                
+                // Update comment count
+                await updateDoc(tokRef, {
+                    commentsCount: increment(1)
+                });
+                
                 console.log("Comment added!");
-            }).catch(error => {
+            } catch (error) {
                 console.error("Error adding comment:", error);
-            });
+            }
         }
 
+        // Function to save/unsave a tok
+        async function handleSave(tokId) {
+            const saveRef = doc(db, "users", currentUserId, "saved", tokId);
+            
+            try {
+                const saveDoc = await getDoc(saveRef);
+                if (saveDoc.exists()) {
+                    // User already saved, so unsave
+                    await deleteDoc(saveRef);
+                    console.log("Unsaved tok:", tokId);
+                } else {
+                    // User hasn't saved, so save
+                    await setDoc(saveRef, {
+                        tokId: tokId,
+                        timestamp: serverTimestamp()
+                    });
+                    console.log("Saved tok:", tokId);
+                }
+            } catch (error) {
+                console.error("Error saving tok:", error);
+            }
+        }
+
+        // Function to share a tok
+        async function handleShare(tokId) {
+            const shareUrl = `${window.location.origin}?tok=${tokId}`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Check out this Tajib Tok!',
+                        text: 'Watch this amazing video on Tajib Tok',
+                        url: shareUrl,
+                    });
+                } catch (error) {
+                    console.log('Sharing cancelled or failed:', error);
+                    fallbackShare(shareUrl);
+                }
+            } else {
+                fallbackShare(shareUrl);
+            }
+        }
+
+        function fallbackShare(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy this link to share:', url);
+            });
+        }
 
         // --- Firebase Storage Functions ---
 
@@ -533,15 +774,27 @@
                 return;
             }
 
-            const description = prompt("Enter a description for your Tok:");
+            // Validate file type and size
+            if (!file.type.startsWith('video/')) {
+                alert("Please select a video file.");
+                return;
+            }
+            
+            if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                alert("Video must be smaller than 100MB.");
+                return;
+            }
+
+            const description = prompt("Enter a description for your Tok:") || "";
             
             try {
                 // 1. Upload video file to Firebase Storage
                 const filePath = `toks/${currentUserId}/${Date.now()}-${file.name}`;
                 const fileRef = storageRef(storage, filePath);
                 
-                alert("Uploading video... please wait.");
+                alert("Uploading video... please wait. This may take a moment.");
                 console.log("Uploading video to", filePath);
+                
                 const uploadTask = await uploadBytes(fileRef, file);
                 const videoUrl = await getDownloadURL(uploadTask.ref);
                 console.log("File available at", videoUrl);
@@ -552,11 +805,13 @@
                     userId: currentUserId,
                     videoUrl: videoUrl,
                     storagePath: filePath,
-                    description: description || "",
+                    description: description,
+                    likesCount: 0,
+                    commentsCount: 0,
                     createdAt: serverTimestamp()
                 });
 
-                alert("Upload successful!");
+                alert("Upload successful! Your Tajib is now live.");
                 console.log("Tok document created in Firestore.");
             
             } catch (error) {
@@ -565,6 +820,33 @@
             }
         }
 
+        // --- UI Update Functions ---
+
+        function updateUserInfo(user) {
+            userAvatar.src = user.photoURL || 'https://placehold.co/100x100/2f2f2f/fff?text=?';
+            userDisplayName.textContent = user.displayName || 'User';
+        }
+
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            // Implement search logic here
+            console.log("Searching for:", searchTerm);
+        });
+
+        // Video click to play/pause
+        videoFeedContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('video-player')) {
+                const video = e.target;
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+        });
+
+        console.log("Tajib Tok initialized successfully!");
     </script>
 </body>
 </html>
