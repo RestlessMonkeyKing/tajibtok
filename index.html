@@ -230,6 +230,73 @@
             color: rgba(255, 255, 255, 0.6);
         }
 
+        /* Shared Videos Section */
+        .shared-videos-section {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .shared-videos-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shared-videos-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .shared-video-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .shared-video-item:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .shared-video-thumbnail {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            margin-right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .shared-video-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .shared-video-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .shared-video-sharer {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
         .logout-btn {
             display: flex;
             align-items: center;
@@ -298,6 +365,131 @@
             object-fit: cover;
         }
 
+        /* Custom Video Controls */
+        .custom-video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 20px;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            z-index: 10;
+        }
+
+        .video-player-container:hover .custom-video-controls,
+        .video-player-container.touch-controls .custom-video-controls {
+            opacity: 1;
+        }
+
+        .video-controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .video-creator-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .creator-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .creator-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .creator-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .video-controls-bottom {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .control-buttons {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .control-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+
         .video-info-overlay {
             position: absolute;
             bottom: 0;
@@ -307,6 +499,7 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.7));
             border-radius: 0 0 16px 16px;
             animation: slideUp 0.5s ease 0.3s both;
+            z-index: 5;
         }
 
         .video-caption {
@@ -601,7 +794,7 @@
             outline: none;
         }
 
-        .progress-bar {
+        .progress-bar-upload {
             width: 100%;
             height: 8px;
             background: rgba(255, 255, 255, 0.2);
@@ -610,7 +803,7 @@
             overflow: hidden;
         }
 
-        .progress {
+        .progress-upload {
             height: 100%;
             background: var(--primary);
             width: 0%;
@@ -819,6 +1012,10 @@
                 flex: 1;
             }
 
+            .shared-videos-section {
+                display: none;
+            }
+
             .logout-btn {
                 margin-top: 0;
             }
@@ -885,6 +1082,16 @@
                 
                 <input type="text" class="search-input" placeholder="Search videos...">
                 
+                <!-- Shared Videos Section -->
+                <div class="shared-videos-section">
+                    <div class="shared-videos-title">
+                        <i class="fas fa-share-square"></i> Shared with you
+                    </div>
+                    <div class="shared-videos-list" id="shared-videos-list">
+                        <!-- Shared videos will appear here -->
+                    </div>
+                </div>
+                
                 <button class="logout-btn" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </button>
@@ -913,7 +1120,7 @@
             <!-- Right Sidebar -->
             <div class="sidebar material-glass">
                 <div class="action-buttons">
-                    <div class="action-btn" id="like-btn" onclick="likeVideo()">
+                    <div class="action-btn" id="like-btn" onclick="toggleLikeVideo()">
                         <div class="action-icon">❤️</div>
                         <div class="action-count" id="like-count">0</div>
                     </div>
@@ -959,8 +1166,8 @@
                 <label class="form-label" for="video-description">Description</label>
                 <textarea id="video-description" class="form-control" placeholder="Enter video description" rows="3" required></textarea>
             </div>
-            <div class="progress-bar">
-                <div class="progress" id="upload-progress"></div>
+            <div class="progress-bar-upload">
+                <div class="progress-upload" id="upload-progress"></div>
             </div>
             <div class="upload-status" id="upload-status"></div>
             <button class="upload-btn" id="upload-button" onclick="uploadVideo()" disabled style="width: 100%;">
@@ -1060,6 +1267,7 @@
         let selectedUsers = [];
         let isSwiping = false;
         let startY = 0;
+        let videoControlsTimeout;
 
         // DOM Elements
         const loginPage = document.getElementById('login-page');
@@ -1090,6 +1298,7 @@
         const usersList = document.getElementById('users-list');
         const commentsList = document.getElementById('comments-list');
         const commentInput = document.getElementById('comment-input');
+        const sharedVideosList = document.getElementById('shared-videos-list');
 
         // Initialize the app
         function init() {
@@ -1125,18 +1334,12 @@
             videoContainer.addEventListener('touchstart', function(e) {
                 isSwiping = true;
                 startY = e.touches[0].clientY;
+                e.preventDefault();
             });
             
             videoContainer.addEventListener('touchmove', function(e) {
                 if (!isSwiping) return;
-                
-                const currentY = e.touches[0].clientY;
-                const diff = startY - currentY;
-                
-                // Prevent default to avoid page scrolling
-                if (Math.abs(diff) > 10) {
-                    e.preventDefault();
-                }
+                e.preventDefault();
             });
             
             videoContainer.addEventListener('touchend', function(e) {
@@ -1159,16 +1362,18 @@
             // Mouse wheel navigation for desktop
             videoContainer.addEventListener('wheel', function(e) {
                 e.preventDefault();
-                if (e.deltaY > 0) {
-                    nextVideo();
-                } else {
-                    prevVideo();
+                if (Math.abs(e.deltaY) > 20) { // Only scroll if significant movement
+                    if (e.deltaY > 0) {
+                        nextVideo();
+                    } else {
+                        prevVideo();
+                    }
                 }
             });
             
             // Keyboard navigation
             document.addEventListener('keydown', function(e) {
-                if (feedPage.style.display === 'block') {
+                if (feedPage.style.display !== 'none') {
                     if (e.key === 'ArrowDown' || e.key === ' ') {
                         e.preventDefault();
                         nextVideo();
@@ -1223,6 +1428,7 @@
             mainApp.style.display = 'block';
             
             loadVideos();
+            loadSharedVideos();
             
             showPopup(`Welcome to TajibTok, ${user.displayName || 'User'}!`, 'success');
         }
@@ -1326,6 +1532,81 @@
                 });
         }
 
+        // Load shared videos for current user
+        function loadSharedVideos() {
+            if (!currentUser) return;
+            
+            db.collection("sharedVideos")
+                .where("sharedTo", "==", currentUser.uid)
+                .orderBy("sharedAt", "desc")
+                .get()
+                .then((querySnapshot) => {
+                    sharedVideosList.innerHTML = '';
+                    
+                    if (querySnapshot.empty) {
+                        sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">No videos shared with you yet</div>';
+                        return;
+                    }
+                    
+                    querySnapshot.forEach((doc) => {
+                        const sharedData = doc.data();
+                        const sharedItem = document.createElement('div');
+                        sharedItem.className = 'shared-video-item';
+                        sharedItem.onclick = () => playSharedVideo(sharedData.videoId);
+                        sharedItem.innerHTML = `
+                            <div class="shared-video-thumbnail">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            <div class="shared-video-info">
+                                <div class="shared-video-title">${sharedData.videoTitle || 'Shared Video'}</div>
+                                <div class="shared-video-sharer">Shared by ${sharedData.sharedByName}</div>
+                            </div>
+                        `;
+                        sharedVideosList.appendChild(sharedItem);
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error loading shared videos:", error);
+                    sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">Error loading shared videos</div>';
+                });
+        }
+
+        // Play a shared video
+        function playSharedVideo(videoId) {
+            const videoIndex = videos.findIndex(v => v.id === videoId);
+            if (videoIndex !== -1) {
+                // Switch to feed tab
+                switchTab('feed');
+                
+                // Set current video to the shared one
+                const currentVideoElement = document.querySelectorAll('.video-item')[currentVideoIndex];
+                const targetVideoElement = document.querySelectorAll('.video-item')[videoIndex];
+                
+                if (currentVideoElement) {
+                    currentVideoElement.classList.remove('active');
+                    const currentVideoPlayer = currentVideoElement.querySelector('video');
+                    if (currentVideoPlayer) {
+                        currentVideoPlayer.pause();
+                    }
+                }
+                
+                if (targetVideoElement) {
+                    targetVideoElement.classList.add('active');
+                    const targetVideoPlayer = targetVideoElement.querySelector('video');
+                    if (targetVideoPlayer) {
+                        targetVideoPlayer.play().catch(e => console.log('Autoplay prevented:', e));
+                    }
+                    
+                    currentVideoIndex = videoIndex;
+                    currentVideoId = videos[videoIndex].id;
+                    updateActionCounts();
+                    checkIfUserLikedVideo();
+                }
+            } else {
+                showPopup('Video not found in feed', 'error');
+            }
+        }
+
         // Get demo videos (fallback)
         function getDemoVideos() {
             return [
@@ -1337,7 +1618,9 @@
                     likes: 1245,
                     comments: 89,
                     shares: 34,
-                    likedBy: []
+                    likedBy: [],
+                    userName: "Nature Lover",
+                    userPhoto: null
                 },
                 {
                     id: 2,
@@ -1347,7 +1630,9 @@
                     likes: 892,
                     comments: 45,
                     shares: 21,
-                    likedBy: []
+                    likedBy: [],
+                    userName: "Ocean Explorer",
+                    userPhoto: null
                 },
                 {
                     id: 3,
@@ -1357,7 +1642,9 @@
                     likes: 1567,
                     comments: 112,
                     shares: 67,
-                    likedBy: []
+                    likedBy: [],
+                    userName: "Adventure Seeker",
+                    userPhoto: null
                 }
             ];
         }
@@ -1376,6 +1663,42 @@
                             <source src="${video.url}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
+                        <div class="custom-video-controls">
+                            <div class="video-controls-top">
+                                <div class="video-creator-info">
+                                    <div class="creator-avatar">
+                                        ${video.userPhoto ? 
+                                            `<img src="${video.userPhoto}" alt="${video.userName}">` : 
+                                            `<i class="fas fa-user"></i>`
+                                        }
+                                    </div>
+                                    <div class="creator-name">${video.userName}</div>
+                                </div>
+                            </div>
+                            <div class="video-controls-bottom">
+                                <div class="progress-container" id="progress-container-${index}">
+                                    <div class="progress-bar" id="progress-bar-${index}"></div>
+                                </div>
+                                <div class="control-buttons">
+                                    <div class="control-left">
+                                        <button class="control-btn" id="play-pause-${index}">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                        <div class="volume-container">
+                                            <button class="control-btn" id="mute-${index}">
+                                                <i class="fas fa-volume-up"></i>
+                                            </button>
+                                            <input type="range" class="volume-slider" id="volume-${index}" min="0" max="1" step="0.1" value="1">
+                                        </div>
+                                    </div>
+                                    <div class="control-right">
+                                        <button class="control-btn" id="fullscreen-${index}">
+                                            <i class="fas fa-expand"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="video-info-overlay">
                             <div class="video-caption">${video.caption}</div>
                             <div class="video-description">${video.description}</div>
@@ -1394,6 +1717,122 @@
                     updateActionCounts();
                     checkIfUserLikedVideo();
                 }
+                
+                // Initialize custom controls for this video
+                setTimeout(() => {
+                    initVideoControls(index);
+                }, 100);
+            });
+        }
+
+        // Initialize custom video controls
+        function initVideoControls(index) {
+            const videoItem = document.querySelectorAll('.video-item')[index];
+            const videoPlayer = videoItem.querySelector('video');
+            const playPauseBtn = videoItem.querySelector(`#play-pause-${index}`);
+            const muteBtn = videoItem.querySelector(`#mute-${index}`);
+            const volumeSlider = videoItem.querySelector(`#volume-${index}`);
+            const progressContainer = videoItem.querySelector(`#progress-container-${index}`);
+            const progressBar = videoItem.querySelector(`#progress-bar-${index}`);
+            const fullscreenBtn = videoItem.querySelector(`#fullscreen-${index}`);
+            const videoContainer = videoItem.querySelector('.video-player-container');
+            
+            // Play/Pause functionality
+            playPauseBtn.addEventListener('click', function() {
+                if (videoPlayer.paused) {
+                    videoPlayer.play();
+                    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    videoPlayer.pause();
+                    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+            
+            // Video player events
+            videoPlayer.addEventListener('play', function() {
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            });
+            
+            videoPlayer.addEventListener('pause', function() {
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('input', function() {
+                videoPlayer.volume = volumeSlider.value;
+                if (videoPlayer.volume == 0) {
+                    muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                } else if (videoPlayer.volume < 0.5) {
+                    muteBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                } else {
+                    muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }
+            });
+            
+            // Mute toggle
+            muteBtn.addEventListener('click', function() {
+                videoPlayer.muted = !videoPlayer.muted;
+                if (videoPlayer.muted) {
+                    muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    volumeSlider.value = 0;
+                } else {
+                    videoPlayer.volume = volumeSlider.value;
+                    if (videoPlayer.volume == 0) {
+                        muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    } else if (videoPlayer.volume < 0.5) {
+                        muteBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                    } else {
+                        muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    }
+                }
+            });
+            
+            // Progress bar
+            videoPlayer.addEventListener('timeupdate', function() {
+                const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+                progressBar.style.width = `${percent}%`;
+            });
+            
+            // Click on progress bar to seek
+            progressContainer.addEventListener('click', function(e) {
+                const rect = progressContainer.getBoundingClientRect();
+                const percent = (e.clientX - rect.left) / rect.width;
+                videoPlayer.currentTime = percent * videoPlayer.duration;
+            });
+            
+            // Fullscreen toggle
+            fullscreenBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement) {
+                    videoContainer.requestFullscreen().catch(err => {
+                        console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                    fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                } else {
+                    document.exitFullscreen();
+                    fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                }
+            });
+            
+            // Show controls on hover
+            videoContainer.addEventListener('mouseenter', function() {
+                clearTimeout(videoControlsTimeout);
+                videoContainer.classList.add('touch-controls');
+            });
+            
+            videoContainer.addEventListener('mouseleave', function() {
+                videoControlsTimeout = setTimeout(() => {
+                    videoContainer.classList.remove('touch-controls');
+                }, 3000);
+            });
+            
+            // Show controls on touch
+            videoContainer.addEventListener('touchstart', function() {
+                clearTimeout(videoControlsTimeout);
+                videoContainer.classList.add('touch-controls');
+                
+                videoControlsTimeout = setTimeout(() => {
+                    videoContainer.classList.remove('touch-controls');
+                }, 3000);
             });
         }
 
@@ -1672,8 +2111,8 @@
                 });
         }
 
-        // Like video function (with one like per user limit)
-        function likeVideo() {
+        // Toggle like video function
+        function toggleLikeVideo() {
             if (!currentUser || !currentVideoId) {
                 showPopup('Please sign in to like videos', 'error');
                 return;
@@ -1683,29 +2122,43 @@
             if (!currentVideo) return;
             
             // Check if user already liked this video
-            if (currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.uid)) {
-                showPopup('You already liked this video!', 'info');
-                return;
-            }
+            const hasLiked = currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.uid);
             
             // Update in Firestore
-            const updatedLikedBy = currentVideo.likedBy ? [...currentVideo.likedBy, currentUser.uid] : [currentUser.uid];
+            let updatedLikedBy;
+            let likeIncrement;
+            
+            if (hasLiked) {
+                // Remove like
+                updatedLikedBy = currentVideo.likedBy.filter(id => id !== currentUser.uid);
+                likeIncrement = -1;
+            } else {
+                // Add like
+                updatedLikedBy = currentVideo.likedBy ? [...currentVideo.likedBy, currentUser.uid] : [currentUser.uid];
+                likeIncrement = 1;
+            }
             
             db.collection("tajibs").doc(currentVideoId).update({
-                likes: firebase.firestore.FieldValue.increment(1),
+                likes: firebase.firestore.FieldValue.increment(likeIncrement),
                 likedBy: updatedLikedBy
             })
             .then(() => {
                 // Update local state
-                currentVideo.likes++;
+                currentVideo.likes += likeIncrement;
                 currentVideo.likedBy = updatedLikedBy;
                 updateActionCounts();
-                likeBtn.classList.add('liked');
-                showPopup('Liked! ❤️', 'success');
+                
+                if (hasLiked) {
+                    likeBtn.classList.remove('liked');
+                    showPopup('Like removed', 'info');
+                } else {
+                    likeBtn.classList.add('liked');
+                    showPopup('Liked! ❤️', 'success');
+                }
             })
             .catch((error) => {
-                console.error("Error liking video:", error);
-                showPopup('Error liking video', 'error');
+                console.error("Error toggling like:", error);
+                showPopup('Error toggling like', 'error');
             });
         }
 
@@ -1825,39 +2278,47 @@
             usersList.innerHTML = '<p>Loading users...</p>';
             selectedUsers = [];
             
-            // In a real app, you would fetch actual users from Firestore
-            const mockUsers = [
-                { id: 'user1', name: 'Alex Johnson', email: 'alex.johnson@example.com', photo: null },
-                { id: 'user2', name: 'Maria Garcia', email: 'maria.garcia@example.com', photo: null },
-                { id: 'user3', name: 'James Wilson', email: 'james.wilson@example.com', photo: null },
-                { id: 'user4', name: 'Sarah Chen', email: 'sarah.chen@example.com', photo: null },
-                { id: 'user5', name: 'David Kim', email: 'david.kim@example.com', photo: null }
-            ];
-            
-            usersList.innerHTML = '';
-            mockUsers.forEach(user => {
-                const userItem = document.createElement('div');
-                userItem.className = 'user-item';
-                userItem.dataset.userId = user.id;
-                userItem.innerHTML = `
-                    <div class="user-avatar">
-                        ${user.photo ? `<img src="${user.photo}" alt="${user.name}">` : '<i class="fas fa-user"></i>'}
-                    </div>
-                    <div class="user-details">
-                        <div class="user-name">${user.name}</div>
-                        <div class="user-email">${user.email}</div>
-                    </div>
-                `;
-                userItem.addEventListener('click', () => {
-                    userItem.classList.toggle('selected');
-                    if (userItem.classList.contains('selected')) {
-                        selectedUsers.push(user.id);
-                    } else {
-                        selectedUsers = selectedUsers.filter(id => id !== user.id);
+            // Get all users from Firestore (excluding current user)
+            db.collection("users").get()
+                .then((querySnapshot) => {
+                    usersList.innerHTML = '';
+                    
+                    if (querySnapshot.empty) {
+                        usersList.innerHTML = '<p>No other users found</p>';
+                        return;
                     }
+                    
+                    querySnapshot.forEach((doc) => {
+                        const userData = doc.data();
+                        if (userData.uid === currentUser.uid) return; // Skip current user
+                        
+                        const userItem = document.createElement('div');
+                        userItem.className = 'user-item';
+                        userItem.dataset.userId = userData.uid;
+                        userItem.innerHTML = `
+                            <div class="user-avatar">
+                                ${userData.photoURL ? `<img src="${userData.photoURL}" alt="${userData.displayName}">` : '<i class="fas fa-user"></i>'}
+                            </div>
+                            <div class="user-details">
+                                <div class="user-name">${userData.displayName || 'User'}</div>
+                                <div class="user-email">${userData.email || ''}</div>
+                            </div>
+                        `;
+                        userItem.addEventListener('click', () => {
+                            userItem.classList.toggle('selected');
+                            if (userItem.classList.contains('selected')) {
+                                selectedUsers.push(userData.uid);
+                            } else {
+                                selectedUsers = selectedUsers.filter(id => id !== userData.uid);
+                            }
+                        });
+                        usersList.appendChild(userItem);
+                    });
+                })
+                .catch((error) => {
+                    console.error("Error loading users:", error);
+                    usersList.innerHTML = '<p>Error loading users</p>';
                 });
-                usersList.appendChild(userItem);
-            });
         }
 
         // Share video with selected users
@@ -1867,19 +2328,42 @@
                 return;
             }
             
-            showPopup(`Video shared with ${selectedUsers.length} user(s)!`, 'success');
+            const currentVideo = videos.find(v => v.id === currentVideoId);
+            if (!currentVideo) return;
             
-            // Update share count
-            db.collection("tajibs").doc(currentVideoId).update({
-                shares: firebase.firestore.FieldValue.increment(selectedUsers.length)
-            })
-            .then(() => {
-                updateActionCounts();
-                closeShareModal();
-            })
-            .catch((error) => {
-                console.error("Error updating share count:", error);
+            // Create shared video records
+            const batch = db.batch();
+            const sharedAt = firebase.firestore.FieldValue.serverTimestamp();
+            
+            selectedUsers.forEach(userId => {
+                const sharedVideoRef = db.collection("sharedVideos").doc();
+                batch.set(sharedVideoRef, {
+                    videoId: currentVideoId,
+                    videoTitle: currentVideo.caption,
+                    sharedBy: currentUser.uid,
+                    sharedByName: currentUser.displayName,
+                    sharedTo: userId,
+                    sharedAt: sharedAt
+                });
             });
+            
+            batch.commit()
+                .then(() => {
+                    // Update share count
+                    return db.collection("tajibs").doc(currentVideoId).update({
+                        shares: firebase.firestore.FieldValue.increment(selectedUsers.length)
+                    });
+                })
+                .then(() => {
+                    showPopup(`Video shared with ${selectedUsers.length} user(s)!`, 'success');
+                    updateActionCounts();
+                    closeShareModal();
+                    loadSharedVideos(); // Refresh shared videos list
+                })
+                .catch((error) => {
+                    console.error("Error sharing video:", error);
+                    showPopup('Error sharing video', 'error');
+                });
         }
 
         // Utility functions
