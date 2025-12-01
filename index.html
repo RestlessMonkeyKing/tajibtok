@@ -1248,9 +1248,6 @@
             appId: "1:356344033975:web:bfd6692cedfbb8133ed332"
         };
 
-        // Catbox Upload URL
-        const CATBOX_UPLOAD_URL = "https://catbox.moe/user/api.php";
-
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -1329,7 +1326,7 @@
                         return;
                     }
                     
-                    // Check file size (Catbox has limits)
+                    // Check file size
                     const maxSize = 200 * 1024 * 1024; // 200MB
                     if (file.size > maxSize) {
                         fileInfo.innerHTML = `<span style="color: #ff6b6b;">File too large! Maximum size is 200MB</span>`;
@@ -1972,12 +1969,11 @@
             videoDescription.value = '';
         }
 
-        // Upload video to Catbox
+        // Upload video to Catbox - FIXED VERSION
         async function uploadToCatbox(file, onProgress) {
             return new Promise((resolve, reject) => {
                 const formData = new FormData();
                 formData.append("reqtype", "fileupload");
-                formData.append("userhash", ""); // Empty for anonymous upload
                 formData.append("fileToUpload", file);
 
                 const xhr = new XMLHttpRequest();
@@ -1993,29 +1989,27 @@
                     if (xhr.status === 200) {
                         const link = xhr.responseText.trim();
                         // Validate that we got a proper URL
-                        if (link && link.startsWith('http')) {
-                            resolve({ url: link });
+                        if (link && (link.startsWith('http') || link.startsWith('https://files.catbox.moe/'))) {
+                            // Ensure we have the full URL
+                            const fullUrl = link.startsWith('http') ? link : `https://files.catbox.moe/${link}`;
+                            resolve({ url: fullUrl });
                         } else {
-                            reject("Upload failed: Invalid response from server");
+                            reject("Upload failed: Invalid response from server - " + link);
                         }
                     } else {
-                        reject("Upload failed: " + xhr.statusText);
+                        reject("Upload failed: " + xhr.status + " - " + xhr.statusText);
                     }
                 };
 
                 xhr.onerror = function () {
-                    reject("Upload failed due to network error.");
+                    reject("Upload failed due to network error. Please check your connection and try again.");
                 };
 
                 xhr.onabort = function () {
                     reject("Upload was cancelled.");
                 };
 
-                xhr.open("POST", CATBOX_UPLOAD_URL);
-                
-                // Remove any Content-Type header to let browser set it with boundary
-                // xhr.setRequestHeader('Content-Type', 'multipart/form-data'); // Don't set this!
-                
+                xhr.open("POST", "https://catbox.moe/user/api.php");
                 xhr.send(formData);
             });
         }
@@ -2091,6 +2085,8 @@
                     errorMessage = 'Network error. Please check your connection.';
                 } else if (error.includes('File too large')) {
                     errorMessage = 'File too large. Maximum size is 200MB.';
+                } else if (error.includes('Invalid response')) {
+                    errorMessage = 'Server error. Please try again later.';
                 }
                 
                 showPopup(errorMessage, 'error');
