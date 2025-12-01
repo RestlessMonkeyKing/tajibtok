@@ -1320,6 +1320,24 @@
             videoFileInput.addEventListener('change', function() {
                 if (this.files.length > 0) {
                     const file = this.files[0];
+                    
+                    // Validate file type
+                    if (!isValidVideoFile(file)) {
+                        fileInfo.innerHTML = `<span style="color: #ff6b6b;">Invalid file type. Please select a video file.</span>`;
+                        this.value = ''; // Clear the file input
+                        uploadButton.disabled = true;
+                        return;
+                    }
+                    
+                    // Check file size (Catbox has limits)
+                    const maxSize = 200 * 1024 * 1024; // 200MB
+                    if (file.size > maxSize) {
+                        fileInfo.innerHTML = `<span style="color: #ff6b6b;">File too large! Maximum size is 200MB</span>`;
+                        this.value = ''; // Clear the file input
+                        uploadButton.disabled = true;
+                        return;
+                    }
+                    
                     fileInfo.innerHTML = `Selected: ${file.name} (${formatFileSize(file.size)})`;
                     uploadButton.disabled = false;
                 } else {
@@ -1959,6 +1977,7 @@
             return new Promise((resolve, reject) => {
                 const formData = new FormData();
                 formData.append("reqtype", "fileupload");
+                formData.append("userhash", ""); // Empty for anonymous upload
                 formData.append("fileToUpload", file);
 
                 const xhr = new XMLHttpRequest();
@@ -1973,7 +1992,12 @@
                 xhr.onload = function () {
                     if (xhr.status === 200) {
                         const link = xhr.responseText.trim();
-                        resolve({ url: link });
+                        // Validate that we got a proper URL
+                        if (link && link.startsWith('http')) {
+                            resolve({ url: link });
+                        } else {
+                            reject("Upload failed: Invalid response from server");
+                        }
                     } else {
                         reject("Upload failed: " + xhr.statusText);
                     }
@@ -1983,7 +2007,15 @@
                     reject("Upload failed due to network error.");
                 };
 
+                xhr.onabort = function () {
+                    reject("Upload was cancelled.");
+                };
+
                 xhr.open("POST", CATBOX_UPLOAD_URL);
+                
+                // Remove any Content-Type header to let browser set it with boundary
+                // xhr.setRequestHeader('Content-Type', 'multipart/form-data'); // Don't set this!
+                
                 xhr.send(formData);
             });
         }
@@ -2013,13 +2045,16 @@
                 showPopup('Please add a description!', 'error');
                 return;
             }
-            
+
             uploadButton.disabled = true;
             uploadStatus.innerHTML = 'Uploading...';
             
             uploadToCatbox(file, (progress) => {
                 uploadProgress.style.width = `${progress}%`;
+                uploadStatus.innerHTML = `Uploading... ${progress}%`;
             }).then(result => {
+                uploadStatus.innerHTML = 'Processing video...';
+                
                 const newVideo = {
                     videoURL: result.url,
                     caption: title,
@@ -2039,6 +2074,7 @@
                 uploadStatus.innerHTML = 'Upload complete!';
                 showPopup('Video uploaded successfully!', 'success');
                 
+                // Reload videos
                 loadVideos();
                 loadUserVideos();
                 
@@ -2047,8 +2083,17 @@
                 }, 1500);
             }).catch(error => {
                 console.error("Upload error:", error);
-                uploadStatus.innerHTML = 'Error: Upload failed';
-                showPopup('Upload failed. Please try again.', 'error');
+                uploadStatus.innerHTML = 'Upload failed';
+                
+                // Provide more specific error messages
+                let errorMessage = 'Upload failed. Please try again.';
+                if (error.includes('network error')) {
+                    errorMessage = 'Network error. Please check your connection.';
+                } else if (error.includes('File too large')) {
+                    errorMessage = 'File too large. Maximum size is 200MB.';
+                }
+                
+                showPopup(errorMessage, 'error');
                 uploadButton.disabled = false;
             });
         }
@@ -2409,6 +2454,18 @@
         function formatDate(date) {
             if (!date) return 'Unknown date';
             return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Validate file type
+        function isValidVideoFile(file) {
+            const validTypes = [
+                'video/mp4', 
+                'video/webm', 
+                'video/ogg', 
+                'video/quicktime',
+                'video/x-msvideo'
+            ];
+            return validTypes.includes(file.type);
         }
 
         // Initialize the app when DOM is loaded
