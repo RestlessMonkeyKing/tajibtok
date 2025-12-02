@@ -353,7 +353,6 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 24px;
             border-radius: 20px;
             transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease;
             opacity: 0;
@@ -383,32 +382,29 @@
             object-fit: cover;
         }
 
-        /* Custom Video Controls */
-        .custom-video-controls {
+        /* Unified Video Overlay - ALL IN ONE */
+        .video-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            background: linear-gradient(transparent, rgba(0,0,0,0.85));
             padding: 20px;
-            transition: opacity 0.3s ease;
-            opacity: 0;
             z-index: 10;
-        }
-
-        .video-player-container:hover .custom-video-controls,
-        .video-player-container.touch-controls .custom-video-controls {
-            opacity: 1;
-        }
-
-        .video-controls-top {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .video-creator-info {
+        /* Top section - Creator info + Video info */
+        .video-overlay-top {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .creator-section {
             display: flex;
             align-items: center;
             gap: 12px;
@@ -423,6 +419,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .creator-avatar img {
@@ -431,22 +428,59 @@
             object-fit: cover;
         }
 
+        .creator-info {
+            display: flex;
+            flex-direction: column;
+        }
+
         .creator-name {
             font-weight: 600;
             font-size: 1rem;
+            margin-bottom: 2px;
         }
 
+        .creator-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        /* Video content section */
+        .video-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .video-caption {
+            font-size: 1.2rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .video-description {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        /* Video controls section */
         .video-controls-bottom {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .progress-container {
             width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
             cursor: pointer;
             position: relative;
         }
@@ -454,7 +488,7 @@
         .progress-bar {
             height: 100%;
             background: var(--primary);
-            border-radius: 3px;
+            border-radius: 2px;
             width: 0%;
             transition: width 0.1s ease;
         }
@@ -510,43 +544,6 @@
             border-radius: 50%;
             background: white;
             cursor: pointer;
-        }
-
-        /* Video info overlay - positioned just above controls */
-        .video-info-overlay {
-            position: absolute;
-            bottom: 150px;
-            left: 0;
-            right: 0;
-            padding: 24px;
-            background: linear-gradient(transparent, rgba(0,0,0,0.7));
-            border-radius: 0 0 16px 16px;
-            animation: slideUp 0.5s ease 0.3s both;
-            z-index: 5;
-        }
-
-        .video-caption {
-            font-size: 1.4rem;
-            margin-bottom: 8px;
-            font-weight: 700;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
-        }
-
-        .video-description {
-            font-size: 1rem;
-            opacity: 0.9;
-            line-height: 1.5;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-            max-height: 80px;
-            overflow-y: auto;
-        }
-
-        .video-stats {
-            display: flex;
-            gap: 20px;
-            font-size: 0.9rem;
-            opacity: 0.8;
-            margin-top: 12px;
         }
 
         /* Action Buttons */
@@ -1173,23 +1170,22 @@
                 grid-template-columns: 1fr;
             }
 
-            .video-info-overlay {
-                bottom: 120px;
-                padding: 16px;
+            .video-overlay {
+                padding: 15px;
             }
 
             .video-caption {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
             }
 
             .video-description {
                 font-size: 0.9rem;
+                max-height: 50px;
             }
         }
 
         @media (max-width: 768px) {
-            .video-info-overlay {
-                bottom: 100px;
+            .video-overlay {
                 padding: 12px;
             }
 
@@ -1199,7 +1195,7 @@
 
             .video-description {
                 font-size: 0.85rem;
-                max-height: 60px;
+                max-height: 45px;
             }
             
             .logo {
@@ -1208,6 +1204,12 @@
             
             .tagline {
                 font-size: 1rem;
+            }
+
+            .action-icon {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
             }
         }
     </style>
@@ -1484,7 +1486,6 @@
             
             // Listen for auth changes
             supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('Auth state changed:', event);
                 if (session) {
                     await handleUserSignIn(session.user);
                 } else {
@@ -1501,16 +1502,12 @@
             
             if (hash && hash.includes('access_token')) {
                 try {
-                    console.log('Handling OAuth callback...');
-                    
                     // Parse the hash fragment
                     const fragmentParams = new URLSearchParams(hash.substring(1));
                     
                     // Get tokens from URL
                     const access_token = fragmentParams.get('access_token');
                     const refresh_token = fragmentParams.get('refresh_token');
-                    const expires_in = fragmentParams.get('expires_in');
-                    const token_type = fragmentParams.get('token_type');
                     
                     if (access_token) {
                         // Set the session using the tokens
@@ -1521,10 +1518,8 @@
                         
                         if (error) throw error;
                         
-                        // Clear the URL hash to clean up the URL
-                        window.history.replaceState(null, null, window.location.pathname + window.location.search);
-                        
-                        console.log('OAuth callback handled successfully');
+                        // Clear the URL hash
+                        window.history.replaceState(null, null, window.location.pathname);
                         return true;
                     }
                 } catch (error) {
@@ -1543,7 +1538,6 @@
                 if (this.files.length > 0) {
                     const file = this.files[0];
                     
-                    // Validate file type
                     if (!isValidVideoFile(file)) {
                         fileInfo.innerHTML = `<span style="color: #ff6b6b;">Invalid file type. Please select a video file.</span>`;
                         this.value = '';
@@ -1551,7 +1545,6 @@
                         return;
                     }
                     
-                    // Check file size
                     const maxSize = 200 * 1024 * 1024;
                     if (file.size > maxSize) {
                         fileInfo.innerHTML = `<span style="color: #ff6b6b;">File too large! Maximum size is 200MB</span>`;
@@ -1568,7 +1561,7 @@
                 }
             });
 
-            // Improved swipe detection
+            // Swipe detection
             videoContainer.addEventListener('touchstart', function(e) {
                 isSwiping = true;
                 startY = e.touches[0].clientY;
@@ -1597,7 +1590,7 @@
                 isSwiping = false;
             });
             
-            // Mouse wheel navigation for desktop
+            // Mouse wheel navigation
             videoContainer.addEventListener('wheel', function(e) {
                 e.preventDefault();
                 if (Math.abs(e.deltaY) > 20) {
@@ -1711,8 +1704,6 @@
             try {
                 const redirectUrl = window.location.origin + window.location.pathname;
                 
-                console.log('Redirecting to:', redirectUrl);
-                
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
@@ -1733,7 +1724,6 @@
 
         // Handle user sign in
         async function handleUserSignIn(user) {
-            console.log('User signed in:', user);
             currentUser = user;
             
             loggedUser.textContent = user.user_metadata?.full_name || user.email || 'User';
@@ -1841,8 +1831,6 @@
             if (!currentUser) return;
             
             try {
-                console.log('Loading user videos for user:', currentUser.id);
-                
                 const { data, error } = await supabase
                     .from('tajibs')
                     .select('*')
@@ -1854,7 +1842,6 @@
                     throw error;
                 }
                 
-                console.log('User videos data:', data);
                 myVideosContainer.innerHTML = '';
                 
                 if (!data || data.length === 0) {
@@ -1941,10 +1928,8 @@
         function playSharedVideo(videoId) {
             const videoIndex = videos.findIndex(v => v.id === videoId);
             if (videoIndex !== -1) {
-                // Switch to feed tab
                 switchTab('feed');
                 
-                // Set current video to the shared one
                 const currentVideoElement = document.querySelectorAll('.video-item')[currentVideoIndex];
                 const targetVideoElement = document.querySelectorAll('.video-item')[videoIndex];
                 
@@ -2003,7 +1988,7 @@
             ];
         }
 
-        // Render videos in the feed
+        // Render videos in the feed - UPDATED WITH UNIFIED OVERLAY
         function renderVideos() {
             videoContainer.innerHTML = '';
             
@@ -2023,16 +2008,27 @@
                             <source src="${video.url}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
-                        <div class="custom-video-controls">
-                            <div class="video-controls-top">
-                                <div class="video-creator-info">
+                        <div class="video-overlay">
+                            <div class="video-overlay-top">
+                                <div class="creator-section">
                                     <div class="creator-avatar">
                                         ${video.userPhoto ? 
                                             `<img src="${video.userPhoto}" alt="${video.userName}">` : 
                                             `<i class="fas fa-user"></i>`
                                         }
                                     </div>
-                                    <div class="creator-name">${video.userName}</div>
+                                    <div class="creator-info">
+                                        <div class="creator-name">${video.userName}</div>
+                                        <div class="creator-stats">
+                                            <span>❤️ ${video.likes || 0}</span>
+                                            <span>💬 ${video.comments || 0}</span>
+                                            <span>↗️ ${video.shares || 0}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="video-content">
+                                    <div class="video-caption">${video.caption}</div>
+                                    ${video.description ? `<div class="video-description">${video.description}</div>` : ''}
                                 </div>
                             </div>
                             <div class="video-controls-bottom">
@@ -2057,14 +2053,6 @@
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="video-info-overlay">
-                            <div class="video-caption">${video.caption}</div>
-                            <div class="video-description">${video.description}</div>
-                            <div class="video-stats">
-                                <span>💬 ${video.comments}</span>
-                                <span>↗️ ${video.shares}</span>
                             </div>
                         </div>
                     </div>
@@ -2095,7 +2083,6 @@
             const progressContainer = videoItem.querySelector(`#progress-container-${index}`);
             const progressBar = videoItem.querySelector(`#progress-bar-${index}`);
             const fullscreenBtn = videoItem.querySelector(`#fullscreen-${index}`);
-            const videoContainerEl = videoItem.querySelector('.video-player-container');
             
             // Play/Pause functionality
             playPauseBtn.addEventListener('click', function() {
@@ -2162,6 +2149,7 @@
             
             // Fullscreen toggle
             fullscreenBtn.addEventListener('click', function() {
+                const videoContainerEl = videoItem.querySelector('.video-player-container');
                 if (!document.fullscreenElement) {
                     videoContainerEl.requestFullscreen().catch(err => {
                         console.log(`Error attempting to enable fullscreen: ${err.message}`);
@@ -2171,28 +2159,6 @@
                     document.exitFullscreen();
                     fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
                 }
-            });
-            
-            // Show controls on hover
-            videoContainerEl.addEventListener('mouseenter', function() {
-                clearTimeout(videoControlsTimeout);
-                videoContainerEl.classList.add('touch-controls');
-            });
-            
-            videoContainerEl.addEventListener('mouseleave', function() {
-                videoControlsTimeout = setTimeout(() => {
-                    videoContainerEl.classList.remove('touch-controls');
-                }, 3000);
-            });
-            
-            // Show controls on touch
-            videoContainerEl.addEventListener('touchstart', function() {
-                clearTimeout(videoControlsTimeout);
-                videoContainerEl.classList.add('touch-controls');
-                
-                videoControlsTimeout = setTimeout(() => {
-                    videoContainerEl.classList.remove('touch-controls');
-                }, 3000);
             });
         }
 
@@ -2305,8 +2271,6 @@
                     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                     const filePath = `videos/${currentUser.id}/${fileName}`;
                     
-                    console.log('Uploading file to Supabase Storage:', filePath);
-                    
                     // Upload the file to Supabase Storage
                     const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('videos')
@@ -2315,19 +2279,12 @@
                             upsert: false
                         });
                     
-                    if (uploadError) {
-                        console.error('Supabase upload error:', uploadError);
-                        throw uploadError;
-                    }
-                    
-                    console.log('File uploaded successfully:', uploadData);
+                    if (uploadError) throw uploadError;
                     
                     // Get public URL for the uploaded file
                     const { data: urlData } = supabase.storage
                         .from('videos')
                         .getPublicUrl(filePath);
-                    
-                    console.log('Public URL:', urlData.publicUrl);
                     
                     // Simulate progress
                     let progress = 0;
@@ -2409,7 +2366,7 @@
                     liked_by: []
                 };
                 
-                const savedVideo = await saveVideoToSupabase(newVideo);
+                await saveVideoToSupabase(newVideo);
                 
                 uploadStatus.innerHTML = 'Upload complete!';
                 showPopup('Video uploaded successfully!', 'success');
@@ -2451,7 +2408,7 @@
             }
         }
 
-        // Open edit modal - FIXED VERSION
+        // Open edit modal
         async function openEditModal(videoId) {
             if (!currentUser) return;
             
@@ -2482,7 +2439,7 @@
             editingVideoId = null;
         }
 
-        // Save video changes - FIXED VERSION
+        // Save video changes
         async function saveVideoChanges() {
             if (!editingVideoId) return;
             
@@ -2524,21 +2481,12 @@
             }
         }
 
-        // Delete video - FIXED VERSION
+        // Delete video
         async function deleteVideo(videoId) {
             if (!videoId) videoId = editingVideoId;
             if (!videoId) return;
             
             try {
-                // First, get the video to find its URL/path
-                const { data: videoData, error: fetchError } = await supabase
-                    .from('tajibs')
-                    .select('video_url')
-                    .eq('id', videoId)
-                    .single();
-                
-                if (fetchError) throw fetchError;
-                
                 // Delete from database
                 const { error: deleteError } = await supabase
                     .from('tajibs')
@@ -2557,7 +2505,7 @@
             }
         }
 
-        // Toggle like video function - FIXED VERSION (proper like/unlike)
+        // Toggle like video function
         async function toggleLikeVideo() {
             if (!currentUser || !currentVideoId) {
                 showPopup('Please sign in to like videos', 'error');
