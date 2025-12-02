@@ -6,10 +6,8 @@
     <title>TajibTok</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #ff2d55;
@@ -1238,20 +1236,12 @@
     <div class="popup" id="popup"></div>
 
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD1LWvjO4n_e-4X0z37X4VTWNVcwHW88bU",
-            authDomain: "ga-w-6184.firebaseapp.com",
-            projectId: "ga-w-6184",
-            storageBucket: "ga-w-6184.firebasestorage.app",
-            messagingSenderId: "356344033975",
-            appId: "1:356344033975:web:bfd6692cedfbb8133ed332"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://your-project.supabase.co'; // Replace with your Supabase URL
+        const SUPABASE_ANON_KEY = 'your-anon-key'; // Replace with your Supabase anon key
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // App State
         let currentUser = null;
@@ -1296,13 +1286,22 @@
         const sharedVideosList = document.getElementById('shared-videos-list');
 
         // Initialize the app
-        function init() {
+        async function init() {
             setupEventListeners();
             
             // Check if user is already signed in
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    handleUserSignIn(user);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                handleUserSignIn(session.user);
+            } else {
+                loginPage.style.display = 'flex';
+                mainApp.style.display = 'none';
+            }
+            
+            // Listen for auth changes
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    handleUserSignIn(session.user);
                 } else {
                     loginPage.style.display = 'flex';
                     mainApp.style.display = 'none';
@@ -1412,27 +1411,30 @@
         }
 
         // Google Sign-In function
-        function signInWithGoogle() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            
-            auth.signInWithPopup(provider)
-                .then((result) => {
-                    handleUserSignIn(result.user);
-                })
-                .catch((error) => {
-                    console.error("Error during sign in:", error);
-                    showPopup('Sign in failed. Please try again.', 'error');
+        async function signInWithGoogle() {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin
+                    }
                 });
+                
+                if (error) throw error;
+            } catch (error) {
+                console.error("Error during sign in:", error);
+                showPopup('Sign in failed. Please try again.', 'error');
+            }
         }
 
         // Handle user sign in
-        function handleUserSignIn(user) {
+        async function handleUserSignIn(user) {
             currentUser = user;
             
-            loggedUser.textContent = user.displayName || user.email;
+            loggedUser.textContent = user.user_metadata?.full_name || user.email;
             
-            if (user.photoURL) {
-                userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
+            if (user.user_metadata?.avatar_url) {
+                userAvatar.innerHTML = `<img src="${user.user_metadata.avatar_url}" alt="Profile">`;
             } else {
                 userAvatar.innerHTML = `<i class="fas fa-user"></i>`;
             }
@@ -1440,167 +1442,189 @@
             loginPage.style.display = 'none';
             mainApp.style.display = 'block';
             
-            // Create/update user document in Firestore
-            createUserDocument(user);
+            // Create/update user document in Supabase
+            await createUserDocument(user);
             
-            loadVideos();
-            loadSharedVideos();
+            await loadVideos();
+            await loadSharedVideos();
             
-            showPopup(`Welcome to TajibTok, ${user.displayName || 'User'}!`, 'success');
+            showPopup(`Welcome to TajibTok, ${user.user_metadata?.full_name || 'User'}!`, 'success');
         }
 
-        // Create/update user document in Firestore
-        function createUserDocument(user) {
-            db.collection("users").doc(user.uid).set({
-                uid: user.uid,
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true })
-            .catch((error) => {
+        // Create/update user document in Supabase
+        async function createUserDocument(user) {
+            try {
+                const { error } = await supabase
+                    .from('users')
+                    .upsert({
+                        id: user.id,
+                        display_name: user.user_metadata?.full_name,
+                        email: user.email,
+                        avatar_url: user.user_metadata?.avatar_url,
+                        last_login: new Date().toISOString()
+                    }, { onConflict: 'id' });
+                
+                if (error) throw error;
+            } catch (error) {
                 console.error("Error creating user document:", error);
-            });
+            }
         }
 
         // Logout function
-        function logout() {
-            auth.signOut()
-                .then(() => {
-                    showPopup('Signed out successfully', 'success');
-                    loginPage.style.display = 'flex';
-                    mainApp.style.display = 'none';
-                    currentUser = null;
-                })
-                .catch((error) => {
-                    console.error("Error during sign out:", error);
-                    showPopup('Sign out failed. Please try again.', 'error');
-                });
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                showPopup('Signed out successfully', 'success');
+                loginPage.style.display = 'flex';
+                mainApp.style.display = 'none';
+                currentUser = null;
+            } catch (error) {
+                console.error("Error during sign out:", error);
+                showPopup('Sign out failed. Please try again.', 'error');
+            }
         }
 
-        // Load videos from Firebase
-        function loadVideos() {
-            db.collection("tajibs").orderBy("createdAt", "desc")
-                .get()
-                .then((querySnapshot) => {
-                    videos = [];
-                    querySnapshot.forEach((doc) => {
-                        const videoData = doc.data();
+        // Load videos from Supabase
+        async function loadVideos() {
+            try {
+                const { data, error } = await supabase
+                    .from('videos')
+                    .select(`
+                        *,
+                        user:users(display_name, avatar_url)
+                    `)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                videos = [];
+                if (data && data.length > 0) {
+                    data.forEach((video) => {
                         videos.push({
-                            id: doc.id,
-                            url: videoData.videoURL,
-                            caption: videoData.caption || "Shared on TajibTok",
-                            description: videoData.description || "",
-                            likes: videoData.likes || 0,
-                            comments: videoData.comments || 0,
-                            shares: videoData.shares || 0,
-                            userId: videoData.userId,
-                            userName: videoData.userName,
-                            userPhoto: videoData.userPhoto,
-                            likedBy: videoData.likedBy || []
+                            id: video.id,
+                            url: video.video_url,
+                            caption: video.caption || "Shared on TajibTok",
+                            description: video.description || "",
+                            likes: video.likes || 0,
+                            comments: video.comments || 0,
+                            shares: video.shares || 0,
+                            userId: video.user_id,
+                            userName: video.user?.display_name || "User",
+                            userPhoto: video.user?.avatar_url,
+                            likedBy: video.liked_by || []
                         });
                     });
-                    
-                    if (videos.length === 0) {
-                        videos = getDemoVideos();
-                    }
-                    
-                    renderVideos();
-                })
-                .catch((error) => {
-                    console.error("Error loading videos:", error);
+                }
+                
+                if (videos.length === 0) {
                     videos = getDemoVideos();
-                    renderVideos();
-                    showPopup('Using demo videos', 'info');
-                });
+                }
+                
+                renderVideos();
+            } catch (error) {
+                console.error("Error loading videos:", error);
+                videos = getDemoVideos();
+                renderVideos();
+                showPopup('Using demo videos', 'info');
+            }
         }
 
         // Load user's videos for the Create tab
-        function loadUserVideos() {
+        async function loadUserVideos() {
             if (!currentUser) return;
             
-            db.collection("tajibs")
-                .where("userId", "==", currentUser.uid)
-                .orderBy("createdAt", "desc")
-                .get()
-                .then((querySnapshot) => {
-                    myVideosContainer.innerHTML = '';
-                    
-                    if (querySnapshot.empty) {
-                        myVideosContainer.innerHTML = '<p style="text-align: center; padding: 40px; opacity: 0.7;">You haven\'t uploaded any videos yet.</p>';
-                        return;
-                    }
-                    
-                    querySnapshot.forEach((doc) => {
-                        const videoData = doc.data();
-                        const videoCard = document.createElement('div');
-                        videoCard.className = 'video-card';
-                        videoCard.innerHTML = `
-                            <img src="https://img.icons8.com/color/96/000000/video.png" class="video-thumbnail" alt="Video Thumbnail">
-                            <div class="video-card-info">
-                                <div class="video-card-title">${videoData.caption || 'My Video'}</div>
-                                <div class="video-card-desc">${videoData.description || 'No description'}</div>
-                                <div class="video-card-stats">
-                                    <span>❤️ ${videoData.likes || 0}</span>
-                                    <span>💬 ${videoData.comments || 0}</span>
-                                    <span>↗️ ${videoData.shares || 0}</span>
-                                </div>
-                                <div class="video-card-actions">
-                                    <button class="edit-btn" onclick="openEditModal('${doc.id}')">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                    <button class="delete-btn" onclick="deleteVideo('${doc.id}')">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
+            try {
+                const { data, error } = await supabase
+                    .from('videos')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                myVideosContainer.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    myVideosContainer.innerHTML = '<p style="text-align: center; padding: 40px; opacity: 0.7;">You haven\'t uploaded any videos yet.</p>';
+                    return;
+                }
+                
+                data.forEach((video) => {
+                    const videoCard = document.createElement('div');
+                    videoCard.className = 'video-card';
+                    videoCard.innerHTML = `
+                        <img src="https://img.icons8.com/color/96/000000/video.png" class="video-thumbnail" alt="Video Thumbnail">
+                        <div class="video-card-info">
+                            <div class="video-card-title">${video.caption || 'My Video'}</div>
+                            <div class="video-card-desc">${video.description || 'No description'}</div>
+                            <div class="video-card-stats">
+                                <span>❤️ ${video.likes || 0}</span>
+                                <span>💬 ${video.comments || 0}</span>
+                                <span>↗️ ${video.shares || 0}</span>
                             </div>
-                        `;
-                        myVideosContainer.appendChild(videoCard);
-                    });
-                })
-                .catch((error) => {
-                    console.error("Error loading user videos:", error);
-                    myVideosContainer.innerHTML = '<p style="text-align: center; padding: 40px; opacity: 0.7;">Error loading your videos.</p>';
+                            <div class="video-card-actions">
+                                <button class="edit-btn" onclick="openEditModal('${video.id}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="delete-btn" onclick="deleteVideo('${video.id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    myVideosContainer.appendChild(videoCard);
                 });
+            } catch (error) {
+                console.error("Error loading user videos:", error);
+                myVideosContainer.innerHTML = '<p style="text-align: center; padding: 40px; opacity: 0.7;">Error loading your videos.</p>';
+            }
         }
 
         // Load shared videos for current user
-        function loadSharedVideos() {
+        async function loadSharedVideos() {
             if (!currentUser) return;
             
-            db.collection("sharedVideos")
-                .where("sharedTo", "==", currentUser.uid)
-                .orderBy("sharedAt", "desc")
-                .get()
-                .then((querySnapshot) => {
-                    sharedVideosList.innerHTML = '';
-                    
-                    if (querySnapshot.empty) {
-                        sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">No videos shared with you yet</div>';
-                        return;
-                    }
-                    
-                    querySnapshot.forEach((doc) => {
-                        const sharedData = doc.data();
-                        const sharedItem = document.createElement('div');
-                        sharedItem.className = 'shared-video-item';
-                        sharedItem.onclick = () => playSharedVideo(sharedData.videoId);
-                        sharedItem.innerHTML = `
-                            <div class="shared-video-thumbnail">
-                                <i class="fas fa-play"></i>
-                            </div>
-                            <div class="shared-video-info">
-                                <div class="shared-video-title">${sharedData.videoTitle || 'Shared Video'}</div>
-                                <div class="shared-video-sharer">Shared by ${sharedData.sharedByName}</div>
-                            </div>
-                        `;
-                        sharedVideosList.appendChild(sharedItem);
-                    });
-                })
-                .catch((error) => {
-                    console.error("Error loading shared videos:", error);
-                    sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">Error loading shared videos</div>';
+            try {
+                const { data, error } = await supabase
+                    .from('shared_videos')
+                    .select(`
+                        *,
+                        video:videos(caption),
+                        shared_by_user:users!shared_videos_shared_by_fkey(display_name)
+                    `)
+                    .eq('shared_to', currentUser.id)
+                    .order('shared_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                sharedVideosList.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">No videos shared with you yet</div>';
+                    return;
+                }
+                
+                data.forEach((sharedData) => {
+                    const sharedItem = document.createElement('div');
+                    sharedItem.className = 'shared-video-item';
+                    sharedItem.onclick = () => playSharedVideo(sharedData.video_id);
+                    sharedItem.innerHTML = `
+                        <div class="shared-video-thumbnail">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <div class="shared-video-info">
+                            <div class="shared-video-title">${sharedData.video?.caption || 'Shared Video'}</div>
+                            <div class="shared-video-sharer">Shared by ${sharedData.shared_by_user?.display_name || 'User'}</div>
+                        </div>
+                    `;
+                    sharedVideosList.appendChild(sharedItem);
                 });
+            } catch (error) {
+                console.error("Error loading shared videos:", error);
+                sharedVideosList.innerHTML = '<div style="padding: 10px; text-align: center; opacity: 0.7; font-size: 0.85rem;">Error loading shared videos</div>';
+            }
         }
 
         // Play a shared video
@@ -1883,7 +1907,7 @@
             if (!currentUser || !currentVideoId) return;
             
             const currentVideo = videos.find(v => v.id === currentVideoId);
-            if (currentVideo && currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.uid)) {
+            if (currentVideo && currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.id)) {
                 likeBtn.classList.add('liked');
             } else {
                 likeBtn.classList.remove('liked');
@@ -1969,58 +1993,53 @@
             videoDescription.value = '';
         }
 
-        // Upload video to Catbox - FIXED VERSION
-        async function uploadToCatbox(file, onProgress) {
-            return new Promise((resolve, reject) => {
-                const formData = new FormData();
-                formData.append("reqtype", "fileupload");
-                formData.append("fileToUpload", file);
-
-                const xhr = new XMLHttpRequest();
-
-                xhr.upload.addEventListener("progress", (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        onProgress(percent);
-                    }
-                });
-
-                xhr.onload = function () {
-                    if (xhr.status === 200) {
-                        const link = xhr.responseText.trim();
-                        // Validate that we got a proper URL
-                        if (link && (link.startsWith('http') || link.startsWith('https://files.catbox.moe/'))) {
-                            // Ensure we have the full URL
-                            const fullUrl = link.startsWith('http') ? link : `https://files.catbox.moe/${link}`;
-                            resolve({ url: fullUrl });
-                        } else {
-                            reject("Upload failed: Invalid response from server - " + link);
-                        }
-                    } else {
-                        reject("Upload failed: " + xhr.status + " - " + xhr.statusText);
-                    }
-                };
-
-                xhr.onerror = function () {
-                    reject("Upload failed due to network error. Please check your connection and try again.");
-                };
-
-                xhr.onabort = function () {
-                    reject("Upload was cancelled.");
-                };
-
-                xhr.open("POST", "https://catbox.moe/user/api.php");
-                xhr.send(formData);
+        // Upload video to Supabase Storage
+        async function uploadToSupabase(file, onProgress) {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                    const filePath = `videos/${currentUser.id}/${fileName}`;
+                    
+                    const { data, error } = await supabase.storage
+                        .from('videos')
+                        .upload(filePath, file, {
+                            cacheControl: '3600',
+                            upsert: false,
+                            onUploadProgress: (progress) => {
+                                const percent = Math.round((progress.loaded / progress.total) * 100);
+                                onProgress(percent);
+                            }
+                        });
+                    
+                    if (error) throw error;
+                    
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('videos')
+                        .getPublicUrl(filePath);
+                    
+                    resolve({ url: urlData.publicUrl });
+                } catch (error) {
+                    reject("Upload failed: " + error.message);
+                }
             });
         }
 
-        // Save video URL to Firestore
-        async function saveVideoToFirestore(videoData) {
-            return db.collection("tajibs").add(videoData);
+        // Save video URL to Supabase
+        async function saveVideoToSupabase(videoData) {
+            const { data, error } = await supabase
+                .from('videos')
+                .insert([videoData])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
         }
 
         // Upload video function
-        function uploadVideo() {
+        async function uploadVideo() {
             const file = videoFileInput.files[0];
             const title = videoTitle.value.trim();
             const description = videoDescription.value.trim();
@@ -2043,76 +2062,75 @@
             uploadButton.disabled = true;
             uploadStatus.innerHTML = 'Uploading...';
             
-            uploadToCatbox(file, (progress) => {
-                uploadProgress.style.width = `${progress}%`;
-                uploadStatus.innerHTML = `Uploading... ${progress}%`;
-            }).then(result => {
+            try {
+                const result = await uploadToSupabase(file, (progress) => {
+                    uploadProgress.style.width = `${progress}%`;
+                    uploadStatus.innerHTML = `Uploading... ${progress}%`;
+                });
+                
                 uploadStatus.innerHTML = 'Processing video...';
                 
                 const newVideo = {
-                    videoURL: result.url,
+                    video_url: result.url,
                     caption: title,
                     description: description,
                     likes: 0,
                     comments: 0,
                     shares: 0,
-                    userId: currentUser.uid,
-                    userName: currentUser.displayName,
-                    userPhoto: currentUser.photoURL,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    likedBy: []
+                    user_id: currentUser.id,
+                    liked_by: []
                 };
                 
-                return saveVideoToFirestore(newVideo);
-            }).then(() => {
+                await saveVideoToSupabase(newVideo);
+                
                 uploadStatus.innerHTML = 'Upload complete!';
                 showPopup('Video uploaded successfully!', 'success');
                 
                 // Reload videos
-                loadVideos();
-                loadUserVideos();
+                await loadVideos();
+                await loadUserVideos();
                 
                 setTimeout(() => {
                     closeUploadModal();
                 }, 1500);
-            }).catch(error => {
+            } catch (error) {
                 console.error("Upload error:", error);
                 uploadStatus.innerHTML = 'Upload failed';
                 
-                // Provide more specific error messages
                 let errorMessage = 'Upload failed. Please try again.';
-                if (error.includes('network error')) {
+                if (error.message.includes('network')) {
                     errorMessage = 'Network error. Please check your connection.';
-                } else if (error.includes('File too large')) {
+                } else if (error.message.includes('size')) {
                     errorMessage = 'File too large. Maximum size is 200MB.';
-                } else if (error.includes('Invalid response')) {
-                    errorMessage = 'Server error. Please try again later.';
                 }
                 
                 showPopup(errorMessage, 'error');
                 uploadButton.disabled = false;
-            });
+            }
         }
 
         // Open edit modal
-        function openEditModal(videoId) {
+        async function openEditModal(videoId) {
             if (!currentUser) return;
             
             editingVideoId = videoId;
             
-            db.collection("tajibs").doc(videoId).get()
-                .then((doc) => {
-                    if (doc.exists) {
-                        const videoData = doc.data();
-                        document.getElementById('edit-title').value = videoData.caption || '';
-                        document.getElementById('edit-description').value = videoData.description || '';
-                        editModal.style.display = 'flex';
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error loading video data:", error);
-                    showPopup('Error loading video data', 'error');
-                });
+            try {
+                const { data, error } = await supabase
+                    .from('videos')
+                    .select('*')
+                    .eq('id', videoId)
+                    .single();
+                
+                if (error) throw error;
+                
+                document.getElementById('edit-title').value = data.caption || '';
+                document.getElementById('edit-description').value = data.description || '';
+                editModal.style.display = 'flex';
+            } catch (error) {
+                console.error("Error loading video data:", error);
+                showPopup('Error loading video data', 'error');
+            }
         }
 
         // Close edit modal
@@ -2122,7 +2140,7 @@
         }
 
         // Save video changes
-        function saveVideoChanges() {
+        async function saveVideoChanges() {
             if (!editingVideoId) return;
             
             const title = document.getElementById('edit-title').value.trim();
@@ -2133,24 +2151,29 @@
                 return;
             }
             
-            db.collection("tajibs").doc(editingVideoId).update({
-                caption: title,
-                description: description
-            })
-            .then(() => {
+            try {
+                const { error } = await supabase
+                    .from('videos')
+                    .update({
+                        caption: title,
+                        description: description
+                    })
+                    .eq('id', editingVideoId);
+                
+                if (error) throw error;
+                
                 showPopup('Video updated successfully!', 'success');
                 closeEditModal();
-                loadUserVideos();
-                loadVideos();
-            })
-            .catch((error) => {
+                await loadUserVideos();
+                await loadVideos();
+            } catch (error) {
                 console.error("Error updating video:", error);
                 showPopup('Error updating video', 'error');
-            });
+            }
         }
 
         // Delete video
-        function deleteVideo(videoId) {
+        async function deleteVideo(videoId) {
             if (!videoId) videoId = editingVideoId;
             if (!videoId) return;
             
@@ -2158,21 +2181,26 @@
                 return;
             }
             
-            db.collection("tajibs").doc(videoId).delete()
-                .then(() => {
-                    showPopup('Video deleted successfully!', 'success');
-                    closeEditModal();
-                    loadUserVideos();
-                    loadVideos();
-                })
-                .catch((error) => {
-                    console.error("Error deleting video:", error);
-                    showPopup('Error deleting video', 'error');
-                });
+            try {
+                const { error } = await supabase
+                    .from('videos')
+                    .delete()
+                    .eq('id', videoId);
+                
+                if (error) throw error;
+                
+                showPopup('Video deleted successfully!', 'success');
+                closeEditModal();
+                await loadUserVideos();
+                await loadVideos();
+            } catch (error) {
+                console.error("Error deleting video:", error);
+                showPopup('Error deleting video', 'error');
+            }
         }
 
         // Toggle like video function
-        function toggleLikeVideo() {
+        async function toggleLikeVideo() {
             if (!currentUser || !currentVideoId) {
                 showPopup('Please sign in to like videos', 'error');
                 return;
@@ -2182,29 +2210,31 @@
             if (!currentVideo) return;
             
             // Check if user already liked this video
-            const hasLiked = currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.uid);
+            const hasLiked = currentVideo.likedBy && currentVideo.likedBy.includes(currentUser.id);
             
-            // Update in Firestore
-            let updatedLikedBy;
-            let likeIncrement;
-            
-            if (hasLiked) {
-                // Remove like
-                updatedLikedBy = currentVideo.likedBy.filter(id => id !== currentUser.uid);
-                likeIncrement = -1;
-            } else {
-                // Add like
-                updatedLikedBy = currentVideo.likedBy ? [...currentVideo.likedBy, currentUser.uid] : [currentUser.uid];
-                likeIncrement = 1;
-            }
-            
-            db.collection("tajibs").doc(currentVideoId).update({
-                likes: firebase.firestore.FieldValue.increment(likeIncrement),
-                likedBy: updatedLikedBy
-            })
-            .then(() => {
+            try {
+                let updatedLikedBy;
+                
+                if (hasLiked) {
+                    // Remove like
+                    updatedLikedBy = currentVideo.likedBy.filter(id => id !== currentUser.id);
+                } else {
+                    // Add like
+                    updatedLikedBy = currentVideo.likedBy ? [...currentVideo.likedBy, currentUser.id] : [currentUser.id];
+                }
+                
+                const { error } = await supabase
+                    .from('videos')
+                    .update({
+                        likes: hasLiked ? currentVideo.likes - 1 : currentVideo.likes + 1,
+                        liked_by: updatedLikedBy
+                    })
+                    .eq('id', currentVideoId);
+                
+                if (error) throw error;
+                
                 // Update local state
-                currentVideo.likes += likeIncrement;
+                currentVideo.likes = hasLiked ? currentVideo.likes - 1 : currentVideo.likes + 1;
                 currentVideo.likedBy = updatedLikedBy;
                 updateActionCounts();
                 
@@ -2215,11 +2245,10 @@
                     likeBtn.classList.add('liked');
                     showPopup('Liked! ❤️', 'success');
                 }
-            })
-            .catch((error) => {
+            } catch (error) {
                 console.error("Error toggling like:", error);
                 showPopup('Error toggling like', 'error');
-            });
+            }
         }
 
         // Open comments modal
@@ -2242,44 +2271,50 @@
         }
 
         // Load comments for current video
-        function loadComments() {
+        async function loadComments() {
             if (!currentVideoId) return;
             
             commentsList.innerHTML = '<p>Loading comments...</p>';
             
-            db.collection("tajibs").doc(currentVideoId).collection("comments")
-                .orderBy("createdAt", "desc")
-                .get()
-                .then((querySnapshot) => {
-                    commentsList.innerHTML = '';
-                    
-                    if (querySnapshot.empty) {
-                        commentsList.innerHTML = '<p>No comments yet. Be the first to comment!</p>';
-                        return;
-                    }
-                    
-                    querySnapshot.forEach((doc) => {
-                        const commentData = doc.data();
-                        const commentItem = document.createElement('div');
-                        commentItem.className = 'comment-item';
-                        commentItem.innerHTML = `
-                            <div class="comment-header">
-                                <span class="comment-author">${commentData.userName || 'Anonymous'}</span>
-                                <span class="comment-time">${formatDate(commentData.createdAt?.toDate())}</span>
-                            </div>
-                            <div>${commentData.text}</div>
-                        `;
-                        commentsList.appendChild(commentItem);
-                    });
-                })
-                .catch((error) => {
-                    console.error("Error loading comments:", error);
-                    commentsList.innerHTML = '<p>Error loading comments</p>';
+            try {
+                const { data, error } = await supabase
+                    .from('comments')
+                    .select(`
+                        *,
+                        user:users(display_name)
+                    `)
+                    .eq('video_id', currentVideoId)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                commentsList.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    commentsList.innerHTML = '<p>No comments yet. Be the first to comment!</p>';
+                    return;
+                }
+                
+                data.forEach((comment) => {
+                    const commentItem = document.createElement('div');
+                    commentItem.className = 'comment-item';
+                    commentItem.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-author">${comment.user?.display_name || 'Anonymous'}</span>
+                            <span class="comment-time">${formatDate(new Date(comment.created_at))}</span>
+                        </div>
+                        <div>${comment.text}</div>
+                    `;
+                    commentsList.appendChild(commentItem);
                 });
+            } catch (error) {
+                console.error("Error loading comments:", error);
+                commentsList.innerHTML = '<p>Error loading comments</p>';
+            }
         }
 
         // Add a comment
-        function addComment() {
+        async function addComment() {
             if (!currentUser || !currentVideoId) return;
             
             const commentText = commentInput.value.trim();
@@ -2288,30 +2323,37 @@
                 return;
             }
             
-            // Add comment to Firestore
-            db.collection("tajibs").doc(currentVideoId).collection("comments").add({
-                text: commentText,
-                userId: currentUser.uid,
-                userName: currentUser.displayName,
-                userPhoto: currentUser.photoURL,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
+            try {
+                // Add comment to Supabase
+                const { error: commentError } = await supabase
+                    .from('comments')
+                    .insert([{
+                        text: commentText,
+                        user_id: currentUser.id,
+                        video_id: currentVideoId
+                    }]);
+                
+                if (commentError) throw commentError;
+                
                 // Update comment count
-                db.collection("tajibs").doc(currentVideoId).update({
-                    comments: firebase.firestore.FieldValue.increment(1)
-                })
-                .then(() => {
-                    commentInput.value = '';
-                    loadComments();
-                    updateActionCounts();
-                    showPopup('Comment added!', 'success');
-                });
-            })
-            .catch((error) => {
+                const currentVideo = videos.find(v => v.id === currentVideoId);
+                const { error: videoError } = await supabase
+                    .from('videos')
+                    .update({
+                        comments: (currentVideo.comments || 0) + 1
+                    })
+                    .eq('id', currentVideoId);
+                
+                if (videoError) throw videoError;
+                
+                commentInput.value = '';
+                await loadComments();
+                updateActionCounts();
+                showPopup('Comment added!', 'success');
+            } catch (error) {
                 console.error("Error adding comment:", error);
                 showPopup('Error adding comment', 'error');
-            });
+            }
         }
 
         // Open share modal
@@ -2334,55 +2376,56 @@
         }
 
         // Load users for sharing
-        function loadUsersForSharing() {
+        async function loadUsersForSharing() {
             usersList.innerHTML = '<p>Loading users...</p>';
             selectedUsers = [];
             
-            // Get all users from Firestore (excluding current user)
-            db.collection("users").get()
-                .then((querySnapshot) => {
-                    usersList.innerHTML = '';
-                    
-                    if (querySnapshot.empty) {
-                        usersList.innerHTML = '<p>No other users found</p>';
-                        return;
-                    }
-                    
-                    querySnapshot.forEach((doc) => {
-                        const userData = doc.data();
-                        if (userData.uid === currentUser.uid) return; // Skip current user
-                        
-                        const userItem = document.createElement('div');
-                        userItem.className = 'user-item';
-                        userItem.dataset.userId = userData.uid;
-                        userItem.innerHTML = `
-                            <div class="user-avatar">
-                                ${userData.photoURL ? `<img src="${userData.photoURL}" alt="${userData.displayName}">` : '<i class="fas fa-user"></i>'}
-                            </div>
-                            <div class="user-details">
-                                <div class="user-name">${userData.displayName || 'User'}</div>
-                                <div class="user-email">${userData.email || ''}</div>
-                            </div>
-                        `;
-                        userItem.addEventListener('click', () => {
-                            userItem.classList.toggle('selected');
-                            if (userItem.classList.contains('selected')) {
-                                selectedUsers.push(userData.uid);
-                            } else {
-                                selectedUsers = selectedUsers.filter(id => id !== userData.uid);
-                            }
-                        });
-                        usersList.appendChild(userItem);
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .neq('id', currentUser.id);
+                
+                if (error) throw error;
+                
+                usersList.innerHTML = '';
+                
+                if (!data || data.length === 0) {
+                    usersList.innerHTML = '<p>No other users found</p>';
+                    return;
+                }
+                
+                data.forEach((user) => {
+                    const userItem = document.createElement('div');
+                    userItem.className = 'user-item';
+                    userItem.dataset.userId = user.id;
+                    userItem.innerHTML = `
+                        <div class="user-avatar">
+                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.display_name}">` : '<i class="fas fa-user"></i>'}
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name">${user.display_name || 'User'}</div>
+                            <div class="user-email">${user.email || ''}</div>
+                        </div>
+                    `;
+                    userItem.addEventListener('click', () => {
+                        userItem.classList.toggle('selected');
+                        if (userItem.classList.contains('selected')) {
+                            selectedUsers.push(user.id);
+                        } else {
+                            selectedUsers = selectedUsers.filter(id => id !== user.id);
+                        }
                     });
-                })
-                .catch((error) => {
-                    console.error("Error loading users:", error);
-                    usersList.innerHTML = '<p>Error loading users</p>';
+                    usersList.appendChild(userItem);
                 });
+            } catch (error) {
+                console.error("Error loading users:", error);
+                usersList.innerHTML = '<p>Error loading users</p>';
+            }
         }
 
         // Share video with selected users
-        function shareVideoWithUsers() {
+        async function shareVideoWithUsers() {
             if (selectedUsers.length === 0) {
                 showPopup('Please select at least one user to share with', 'error');
                 return;
@@ -2391,39 +2434,39 @@
             const currentVideo = videos.find(v => v.id === currentVideoId);
             if (!currentVideo) return;
             
-            // Create shared video records
-            const batch = db.batch();
-            const sharedAt = firebase.firestore.FieldValue.serverTimestamp();
-            
-            selectedUsers.forEach(userId => {
-                const sharedVideoRef = db.collection("sharedVideos").doc();
-                batch.set(sharedVideoRef, {
-                    videoId: currentVideoId,
-                    videoTitle: currentVideo.caption,
-                    sharedBy: currentUser.uid,
-                    sharedByName: currentUser.displayName,
-                    sharedTo: userId,
-                    sharedAt: sharedAt
-                });
-            });
-            
-            batch.commit()
-                .then(() => {
-                    // Update share count
-                    return db.collection("tajibs").doc(currentVideoId).update({
-                        shares: firebase.firestore.FieldValue.increment(selectedUsers.length)
-                    });
-                })
-                .then(() => {
-                    showPopup(`Video shared with ${selectedUsers.length} user(s)!`, 'success');
-                    updateActionCounts();
-                    closeShareModal();
-                    loadSharedVideos(); // Refresh shared videos list
-                })
-                .catch((error) => {
-                    console.error("Error sharing video:", error);
-                    showPopup('Error sharing video', 'error');
-                });
+            try {
+                // Create shared video records
+                const sharedVideos = selectedUsers.map(userId => ({
+                    video_id: currentVideoId,
+                    video_title: currentVideo.caption,
+                    shared_by: currentUser.id,
+                    shared_to: userId
+                }));
+                
+                const { error: shareError } = await supabase
+                    .from('shared_videos')
+                    .insert(sharedVideos);
+                
+                if (shareError) throw shareError;
+                
+                // Update share count
+                const { error: videoError } = await supabase
+                    .from('videos')
+                    .update({
+                        shares: (currentVideo.shares || 0) + selectedUsers.length
+                    })
+                    .eq('id', currentVideoId);
+                
+                if (videoError) throw videoError;
+                
+                showPopup(`Video shared with ${selectedUsers.length} user(s)!`, 'success');
+                updateActionCounts();
+                closeShareModal();
+                await loadSharedVideos(); // Refresh shared videos list
+            } catch (error) {
+                console.error("Error sharing video:", error);
+                showPopup('Error sharing video', 'error');
+            }
         }
 
         // Utility functions
