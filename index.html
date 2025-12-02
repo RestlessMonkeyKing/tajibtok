@@ -1015,7 +1015,7 @@
             }
 
             .logout-btn {
-                margin-top: 0;
+                margin-top = 0;
             }
 
             .action-buttons {
@@ -1236,9 +1236,9 @@
     <div class="popup" id="popup"></div>
 
     <script>
-        // Supabase Configuration
-        const SUPABASE_URL = 'https://your-project.supabase.co'; // Replace with your Supabase URL
-        const SUPABASE_ANON_KEY = 'your-anon-key'; // Replace with your Supabase anon key
+        // Supabase Configuration - USING YOUR CREDENTIALS
+        const SUPABASE_URL = 'https://jtamupukjsmmuwttxujd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0YW11cHVranNtbXV3dHR4dWpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NTc0NTYsImV4cCI6MjA4MDEzMzQ1Nn0.hQloUXiBh6pgMxT18T5GOoCOZ8gz4vnh1w7B8KEKPsw';
         
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1292,16 +1292,16 @@
             // Check if user is already signed in
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                handleUserSignIn(session.user);
+                await handleUserSignIn(session.user);
             } else {
                 loginPage.style.display = 'flex';
                 mainApp.style.display = 'none';
             }
             
             // Listen for auth changes
-            supabase.auth.onAuthStateChange((event, session) => {
+            supabase.auth.onAuthStateChange(async (event, session) => {
                 if (session) {
-                    handleUserSignIn(session.user);
+                    await handleUserSignIn(session.user);
                 } else {
                     loginPage.style.display = 'flex';
                     mainApp.style.display = 'none';
@@ -1416,7 +1416,11 @@
                 const { data, error } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                        redirectTo: window.location.origin
+                        redirectTo: window.location.origin,
+                        queryParams: {
+                            access_type: 'offline',
+                            prompt: 'consent'
+                        }
                     }
                 });
                 
@@ -1431,7 +1435,7 @@
         async function handleUserSignIn(user) {
             currentUser = user;
             
-            loggedUser.textContent = user.user_metadata?.full_name || user.email;
+            loggedUser.textContent = user.user_metadata?.full_name || user.email || 'User';
             
             if (user.user_metadata?.avatar_url) {
                 userAvatar.innerHTML = `<img src="${user.user_metadata.avatar_url}" alt="Profile">`;
@@ -1458,9 +1462,9 @@
                     .from('users')
                     .upsert({
                         id: user.id,
-                        display_name: user.user_metadata?.full_name,
+                        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
                         email: user.email,
-                        avatar_url: user.user_metadata?.avatar_url,
+                        photo_url: user.user_metadata?.avatar_url,
                         last_login: new Date().toISOString()
                     }, { onConflict: 'id' });
                 
@@ -1480,6 +1484,9 @@
                 loginPage.style.display = 'flex';
                 mainApp.style.display = 'none';
                 currentUser = null;
+                videos = [];
+                currentVideoIndex = 0;
+                currentVideoId = null;
             } catch (error) {
                 console.error("Error during sign out:", error);
                 showPopup('Sign out failed. Please try again.', 'error');
@@ -1490,11 +1497,8 @@
         async function loadVideos() {
             try {
                 const { data, error } = await supabase
-                    .from('videos')
-                    .select(`
-                        *,
-                        user:users(display_name, avatar_url)
-                    `)
+                    .from('tajibs')
+                    .select('*')
                     .order('created_at', { ascending: false });
                 
                 if (error) throw error;
@@ -1511,8 +1515,8 @@
                             comments: video.comments || 0,
                             shares: video.shares || 0,
                             userId: video.user_id,
-                            userName: video.user?.display_name || "User",
-                            userPhoto: video.user?.avatar_url,
+                            userName: video.user_name || "User",
+                            userPhoto: video.user_photo,
                             likedBy: video.liked_by || []
                         });
                     });
@@ -1537,7 +1541,7 @@
             
             try {
                 const { data, error } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('created_at', { ascending: false });
@@ -1589,11 +1593,7 @@
             try {
                 const { data, error } = await supabase
                     .from('shared_videos')
-                    .select(`
-                        *,
-                        video:videos(caption),
-                        shared_by_user:users!shared_videos_shared_by_fkey(display_name)
-                    `)
+                    .select('*')
                     .eq('shared_to', currentUser.id)
                     .order('shared_at', { ascending: false });
                 
@@ -1615,8 +1615,8 @@
                             <i class="fas fa-play"></i>
                         </div>
                         <div class="shared-video-info">
-                            <div class="shared-video-title">${sharedData.video?.caption || 'Shared Video'}</div>
-                            <div class="shared-video-sharer">Shared by ${sharedData.shared_by_user?.display_name || 'User'}</div>
+                            <div class="shared-video-title">${sharedData.video_title || 'Shared Video'}</div>
+                            <div class="shared-video-sharer">Shared by ${sharedData.shared_by_name || 'User'}</div>
                         </div>
                     `;
                     sharedVideosList.appendChild(sharedItem);
@@ -2001,7 +2001,7 @@
                     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                     const filePath = `videos/${currentUser.id}/${fileName}`;
                     
-                    const { data, error } = await supabase.storage
+                    const { data: uploadData, error: uploadError } = await supabase.storage
                         .from('videos')
                         .upload(filePath, file, {
                             cacheControl: '3600',
@@ -2012,7 +2012,7 @@
                             }
                         });
                     
-                    if (error) throw error;
+                    if (uploadError) throw uploadError;
                     
                     // Get public URL
                     const { data: urlData } = supabase.storage
@@ -2029,7 +2029,7 @@
         // Save video URL to Supabase
         async function saveVideoToSupabase(videoData) {
             const { data, error } = await supabase
-                .from('videos')
+                .from('tajibs')
                 .insert([videoData])
                 .select()
                 .single();
@@ -2078,6 +2078,8 @@
                     comments: 0,
                     shares: 0,
                     user_id: currentUser.id,
+                    user_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+                    user_photo: currentUser.user_metadata?.avatar_url,
                     liked_by: []
                 };
                 
@@ -2100,8 +2102,10 @@
                 let errorMessage = 'Upload failed. Please try again.';
                 if (error.message.includes('network')) {
                     errorMessage = 'Network error. Please check your connection.';
-                } else if (error.message.includes('size')) {
+                } else if (error.message.includes('size') || error.message.includes('too large')) {
                     errorMessage = 'File too large. Maximum size is 200MB.';
+                } else if (error.message.includes('bucket')) {
+                    errorMessage = 'Storage bucket not found. Please check Supabase storage setup.';
                 }
                 
                 showPopup(errorMessage, 'error');
@@ -2117,7 +2121,7 @@
             
             try {
                 const { data, error } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .select('*')
                     .eq('id', videoId)
                     .single();
@@ -2153,7 +2157,7 @@
             
             try {
                 const { error } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .update({
                         caption: title,
                         description: description
@@ -2183,7 +2187,7 @@
             
             try {
                 const { error } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .delete()
                     .eq('id', videoId);
                 
@@ -2224,7 +2228,7 @@
                 }
                 
                 const { error } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .update({
                         likes: hasLiked ? currentVideo.likes - 1 : currentVideo.likes + 1,
                         liked_by: updatedLikedBy
@@ -2278,11 +2282,8 @@
             
             try {
                 const { data, error } = await supabase
-                    .from('comments')
-                    .select(`
-                        *,
-                        user:users(display_name)
-                    `)
+                    .from('video_comments')
+                    .select('*')
                     .eq('video_id', currentVideoId)
                     .order('created_at', { ascending: false });
                 
@@ -2300,7 +2301,7 @@
                     commentItem.className = 'comment-item';
                     commentItem.innerHTML = `
                         <div class="comment-header">
-                            <span class="comment-author">${comment.user?.display_name || 'Anonymous'}</span>
+                            <span class="comment-author">${comment.user_name || 'Anonymous'}</span>
                             <span class="comment-time">${formatDate(new Date(comment.created_at))}</span>
                         </div>
                         <div>${comment.text}</div>
@@ -2326,10 +2327,12 @@
             try {
                 // Add comment to Supabase
                 const { error: commentError } = await supabase
-                    .from('comments')
+                    .from('video_comments')
                     .insert([{
                         text: commentText,
                         user_id: currentUser.id,
+                        user_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+                        user_photo: currentUser.user_metadata?.avatar_url,
                         video_id: currentVideoId
                     }]);
                 
@@ -2338,7 +2341,7 @@
                 // Update comment count
                 const currentVideo = videos.find(v => v.id === currentVideoId);
                 const { error: videoError } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .update({
                         comments: (currentVideo.comments || 0) + 1
                     })
@@ -2401,7 +2404,7 @@
                     userItem.dataset.userId = user.id;
                     userItem.innerHTML = `
                         <div class="user-avatar">
-                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="${user.display_name}">` : '<i class="fas fa-user"></i>'}
+                            ${user.photo_url ? `<img src="${user.photo_url}" alt="${user.display_name}">` : '<i class="fas fa-user"></i>'}
                         </div>
                         <div class="user-details">
                             <div class="user-name">${user.display_name || 'User'}</div>
@@ -2440,6 +2443,7 @@
                     video_id: currentVideoId,
                     video_title: currentVideo.caption,
                     shared_by: currentUser.id,
+                    shared_by_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
                     shared_to: userId
                 }));
                 
@@ -2451,7 +2455,7 @@
                 
                 // Update share count
                 const { error: videoError } = await supabase
-                    .from('videos')
+                    .from('tajibs')
                     .update({
                         shares: (currentVideo.shares || 0) + selectedUsers.length
                     })
