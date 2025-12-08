@@ -369,7 +369,6 @@
             overflow: hidden;
             position: relative;
             background: #000;
-            cursor: pointer;
         }
 
         .video-player-container:active {
@@ -1465,6 +1464,7 @@
         let videoControlsTimeout;
         let lastTap = 0;
         let tapTimeout;
+        let isDoubleTapProcessing = false;
 
         // DOM Elements
         const loginPage = document.getElementById('login-page');
@@ -1655,48 +1655,52 @@
                 }
             });
 
-            // Single tap for play/pause, double tap for like
+            // Fixed: Only handle double tap for like, single tap doesn't trigger pause
             videoContainer.addEventListener('click', function(e) {
-                const currentTime = new Date().getTime();
-                const timeDiff = currentTime - lastTap;
+                // Check if click is on video controls or overlay
+                if (e.target.closest('.control-btn') || 
+                    e.target.closest('.progress-container') ||
+                    e.target.closest('.volume-slider') ||
+                    e.target.closest('.video-overlay')) {
+                    return; // Let the control handle it
+                }
                 
-                if (timeDiff < 300 && timeDiff > 0) {
-                    // Double tap detected - like video
-                    clearTimeout(tapTimeout);
-                    lastTap = 0;
+                // Check if click is on the video player itself
+                if (e.target.classList.contains('video-player') || 
+                    e.target.closest('.video-player-container')) {
                     
-                    // Show heart animation
-                    const heart = document.querySelector('.double-tap-heart');
-                    if (heart) {
-                        heart.classList.add('show');
+                    // Double tap detection for like
+                    const currentTime = new Date().getTime();
+                    const timeDiff = currentTime - lastTap;
+                    
+                    if (timeDiff < 300 && timeDiff > 0 && !isDoubleTapProcessing) {
+                        // Double tap detected - like video
+                        clearTimeout(tapTimeout);
+                        lastTap = 0;
+                        isDoubleTapProcessing = true;
+                        
+                        // Show heart animation at click position
+                        const heart = document.createElement('div');
+                        heart.className = 'double-tap-heart show';
+                        heart.innerHTML = '❤️';
+                        heart.style.left = `${e.clientX}px`;
+                        heart.style.top = `${e.clientY}px`;
+                        document.body.appendChild(heart);
+                        
                         setTimeout(() => {
-                            heart.classList.remove('show');
+                            heart.remove();
+                            isDoubleTapProcessing = false;
                         }, 1000);
+                        
+                        // Trigger like
+                        toggleLikeVideo();
+                    } else {
+                        // Single tap - do nothing (play/pause is handled by control buttons)
+                        lastTap = currentTime;
+                        tapTimeout = setTimeout(() => {
+                            // Nothing happens on single tap
+                        }, 300);
                     }
-                    
-                    // Trigger like
-                    toggleLikeVideo();
-                } else {
-                    // Single tap - toggle play/pause
-                    lastTap = currentTime;
-                    tapTimeout = setTimeout(() => {
-                        const currentVideoPlayer = document.querySelectorAll('.video-item')[currentVideoIndex].querySelector('video');
-                        if (currentVideoPlayer) {
-                            if (currentVideoPlayer.paused) {
-                                currentVideoPlayer.play();
-                                const playPauseBtn = document.querySelector(`#play-pause-${currentVideoIndex}`);
-                                if (playPauseBtn) {
-                                    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                                }
-                            } else {
-                                currentVideoPlayer.pause();
-                                const playPauseBtn = document.querySelector(`#play-pause-${currentVideoIndex}`);
-                                if (playPauseBtn) {
-                                    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-                                }
-                            }
-                        }
-                    }, 300);
                 }
             });
         }
@@ -2007,12 +2011,6 @@
         function renderVideos() {
             videoContainer.innerHTML = '';
             
-            // Add double-tap heart overlay
-            const doubleTapHeart = document.createElement('div');
-            doubleTapHeart.className = 'double-tap-heart';
-            doubleTapHeart.innerHTML = '❤️';
-            videoContainer.appendChild(doubleTapHeart);
-            
             videos.forEach((video, index) => {
                 const videoItem = document.createElement('div');
                 videoItem.className = `video-item ${index === 0 ? 'active' : ''}`;
@@ -2100,7 +2098,8 @@
             const fullscreenBtn = videoItem.querySelector(`#fullscreen-${index}`);
             
             // Play/Pause functionality
-            playPauseBtn.addEventListener('click', function() {
+            playPauseBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 if (videoPlayer.paused) {
                     videoPlayer.play();
                     playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -2120,7 +2119,8 @@
             });
             
             // Volume control
-            volumeSlider.addEventListener('input', function() {
+            volumeSlider.addEventListener('input', function(e) {
+                e.stopPropagation();
                 videoPlayer.volume = volumeSlider.value;
                 if (videoPlayer.volume == 0) {
                     muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
@@ -2132,7 +2132,8 @@
             });
             
             // Mute toggle
-            muteBtn.addEventListener('click', function() {
+            muteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 videoPlayer.muted = !videoPlayer.muted;
                 if (videoPlayer.muted) {
                     muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
@@ -2157,13 +2158,15 @@
             
             // Click on progress bar to seek
             progressContainer.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const rect = progressContainer.getBoundingClientRect();
                 const percent = (e.clientX - rect.left) / rect.width;
                 videoPlayer.currentTime = percent * videoPlayer.duration;
             });
             
             // Fullscreen toggle
-            fullscreenBtn.addEventListener('click', function() {
+            fullscreenBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 const videoContainerEl = videoItem.querySelector('.video-player-container');
                 if (!document.fullscreenElement) {
                     videoContainerEl.requestFullscreen().catch(err => {
@@ -2321,7 +2324,7 @@
                 // Step 1: Create a unique filename
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-                let filePath = `videos/${fileName}`; // Simple path without user ID for now
+                let filePath = `videos/${fileName}`;
                 
                 console.log('Uploading to path:', filePath);
                 
@@ -2673,14 +2676,22 @@
             }
         }
 
-        // Toggle like video function
+        // Toggle like video function - FIXED FOR ACCURACY
         async function toggleLikeVideo() {
-            if (!currentUser || !currentVideoId) {
+            if (!currentUser) {
                 showPopup('Please sign in to like videos', 'error');
                 return;
             }
             
-            const currentVideo = videos.find(v => v.id === currentVideoId);
+            if (!currentVideoId) {
+                showPopup('No video selected', 'error');
+                return;
+            }
+            
+            const currentVideoIndex = videos.findIndex(v => v.id === currentVideoId);
+            if (currentVideoIndex === -1) return;
+            
+            const currentVideo = videos[currentVideoIndex];
             if (!currentVideo) return;
             
             // Check if user already liked this video
@@ -2710,6 +2721,7 @@
                     showPopup('Liked! ❤️', 'success');
                 }
                 
+                // Update in database
                 const { error } = await supabase
                     .from('tajibs')
                     .update({
@@ -2720,9 +2732,23 @@
                 
                 if (error) throw error;
                 
-                // Update local state
+                // Update local state IMMEDIATELY
                 currentVideo.likes = newLikeCount;
                 currentVideo.likedBy = updatedLikedBy;
+                
+                // Update the display in the video overlay
+                const currentVideoElement = document.querySelectorAll('.video-item')[currentVideoIndex];
+                if (currentVideoElement) {
+                    const creatorStats = currentVideoElement.querySelector('.creator-stats');
+                    if (creatorStats) {
+                        creatorStats.innerHTML = `
+                            <span>❤️ ${newLikeCount}</span>
+                            <span>💬 ${currentVideo.comments || 0}</span>
+                            <span>↗️ ${currentVideo.shares || 0}</span>
+                        `;
+                    }
+                }
+                
                 updateActionCounts();
                 
             } catch (error) {
@@ -2768,7 +2794,7 @@
                 commentsList.innerHTML = '';
                 
                 if (!data || data.length === 0) {
-                    commentsList.innerHTML = '<p>No comments yet. Be the first to comment!</p>';
+                    commentsList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">No comments yet. Be the first to comment!</p>';
                     return;
                 }
                 
@@ -2786,7 +2812,7 @@
                 });
             } catch (error) {
                 console.error("Error loading comments:", error);
-                commentsList.innerHTML = '<p>Error loading comments</p>';
+                commentsList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">Error loading comments</p>';
             }
         }
 
@@ -2814,20 +2840,42 @@
                 
                 if (commentError) throw commentError;
                 
-                // Update comment count
+                // Update comment count in database
                 const currentVideo = videos.find(v => v.id === currentVideoId);
-                const { error: videoError } = await supabase
-                    .from('tajibs')
-                    .update({
-                        comments: (currentVideo.comments || 0) + 1
-                    })
-                    .eq('id', currentVideoId);
-                
-                if (videoError) throw videoError;
+                if (currentVideo) {
+                    const newCommentCount = (currentVideo.comments || 0) + 1;
+                    
+                    const { error: videoError } = await supabase
+                        .from('tajibs')
+                        .update({
+                            comments: newCommentCount
+                        })
+                        .eq('id', currentVideoId);
+                    
+                    if (videoError) throw videoError;
+                    
+                    // Update local state
+                    currentVideo.comments = newCommentCount;
+                    
+                    // Update the display in the video overlay
+                    const currentVideoIndex = videos.findIndex(v => v.id === currentVideoId);
+                    const currentVideoElement = document.querySelectorAll('.video-item')[currentVideoIndex];
+                    if (currentVideoElement) {
+                        const creatorStats = currentVideoElement.querySelector('.creator-stats');
+                        if (creatorStats) {
+                            creatorStats.innerHTML = `
+                                <span>❤️ ${currentVideo.likes || 0}</span>
+                                <span>💬 ${newCommentCount}</span>
+                                <span>↗️ ${currentVideo.shares || 0}</span>
+                            `;
+                        }
+                    }
+                    
+                    updateActionCounts();
+                }
                 
                 commentInput.value = '';
                 await loadComments();
-                updateActionCounts();
                 showPopup('Comment added!', 'success');
             } catch (error) {
                 console.error("Error adding comment:", error);
@@ -2842,7 +2890,10 @@
                 return;
             }
             
-            if (!currentVideoId) return;
+            if (!currentVideoId) {
+                showPopup('No video selected', 'error');
+                return;
+            }
             
             loadUsersForSharing();
             shareModal.style.display = 'flex';
@@ -2854,9 +2905,9 @@
             selectedUsers = [];
         }
 
-        // Load users for sharing
+        // Load users for sharing - FIXED
         async function loadUsersForSharing() {
-            usersList.innerHTML = '<p>Loading users...</p>';
+            usersList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">Loading users...</p>';
             selectedUsers = [];
             
             try {
@@ -2870,7 +2921,7 @@
                 usersList.innerHTML = '';
                 
                 if (!data || data.length === 0) {
-                    usersList.innerHTML = '<p>No other users found</p>';
+                    usersList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">No other users found</p>';
                     return;
                 }
                 
@@ -2899,45 +2950,87 @@
                 });
             } catch (error) {
                 console.error("Error loading users:", error);
-                usersList.innerHTML = '<p>Error loading users</p>';
+                usersList.innerHTML = '<p style="text-align: center; padding: 20px; opacity: 0.7;">Error loading users</p>';
             }
         }
 
-        // Share video with selected users
+        // Share video with selected users - FIXED
         async function shareVideoWithUsers() {
             if (selectedUsers.length === 0) {
                 showPopup('Please select at least one user to share with', 'error');
                 return;
             }
             
+            if (!currentVideoId) {
+                showPopup('No video selected', 'error');
+                return;
+            }
+            
             const currentVideo = videos.find(v => v.id === currentVideoId);
-            if (!currentVideo) return;
+            if (!currentVideo) {
+                showPopup('Video not found', 'error');
+                return;
+            }
             
             try {
+                // Check if shared_videos table exists
+                const { error: tableCheckError } = await supabase
+                    .from('shared_videos')
+                    .select('*')
+                    .limit(1);
+                
+                if (tableCheckError && tableCheckError.message.includes('does not exist')) {
+                    showPopup('Shared videos table not set up. Please create table in Supabase.', 'error');
+                    return;
+                }
+                
                 // Create shared video records
                 const sharedVideos = selectedUsers.map(userId => ({
                     video_id: currentVideoId,
                     video_title: currentVideo.caption,
                     shared_by: currentUser.id,
                     shared_by_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
-                    shared_to: userId
+                    shared_to: userId,
+                    shared_at: new Date().toISOString()
                 }));
                 
                 const { error: shareError } = await supabase
                     .from('shared_videos')
                     .insert(sharedVideos);
                 
-                if (shareError) throw shareError;
+                if (shareError) {
+                    console.error('Share error:', shareError);
+                    throw shareError;
+                }
                 
-                // Update share count
+                // Update share count in database
+                const newShareCount = (currentVideo.shares || 0) + selectedUsers.length;
+                
                 const { error: videoError } = await supabase
                     .from('tajibs')
                     .update({
-                        shares: (currentVideo.shares || 0) + selectedUsers.length
+                        shares: newShareCount
                     })
                     .eq('id', currentVideoId);
                 
                 if (videoError) throw videoError;
+                
+                // Update local state
+                currentVideo.shares = newShareCount;
+                
+                // Update the display in the video overlay
+                const currentVideoIndex = videos.findIndex(v => v.id === currentVideoId);
+                const currentVideoElement = document.querySelectorAll('.video-item')[currentVideoIndex];
+                if (currentVideoElement) {
+                    const creatorStats = currentVideoElement.querySelector('.creator-stats');
+                    if (creatorStats) {
+                        creatorStats.innerHTML = `
+                            <span>❤️ ${currentVideo.likes || 0}</span>
+                            <span>💬 ${currentVideo.comments || 0}</span>
+                            <span>↗️ ${newShareCount}</span>
+                        `;
+                    }
+                }
                 
                 showPopup(`Video shared with ${selectedUsers.length} user(s)!`, 'success');
                 updateActionCounts();
@@ -2945,7 +3038,7 @@
                 await loadSharedVideos();
             } catch (error) {
                 console.error("Error sharing video:", error);
-                showPopup('Error sharing video', 'error');
+                showPopup('Error sharing video. Please try again.', 'error');
             }
         }
 
